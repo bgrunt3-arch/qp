@@ -373,8 +373,8 @@ export default function Home() {
   const shareDiscountHistoryItem = async (item: DiscountHistoryItem) => {
     const text =
       item.discountAmount >= 0
-        ? `割引後 ${formatYen(item.priceAfterDiscount)}（${formatYen(item.discountAmount)} お得、${item.discountRate}%OFF）`
-        : `割引後 ${formatYen(item.priceAfterDiscount)}（${formatYen(-item.discountAmount)} 高く）`;
+        ? `${formatYen(item.originalPrice)} - ${formatYen(item.discountAmount)} = ${formatYen(item.priceAfterDiscount)}（${item.discountRate}%OFF）`
+        : `${formatYen(item.originalPrice)} + ${formatYen(-item.discountAmount)} = ${formatYen(item.priceAfterDiscount)}（+${formatYen(-item.discountAmount)}）`;
     try {
       await navigator.clipboard.writeText(text);
       setToastVisible(true);
@@ -690,13 +690,19 @@ export default function Home() {
                   className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
                 >
                   <span className="text-xs sm:text-sm text-label truncate flex-1 min-w-0">
-                    {formatYen(item.originalPrice)} → {formatYen(item.priceAfterDiscount)}（
                     {item.discountAmount >= 0 ? (
-                      <span className="text-[#22c55e] font-semibold">{item.discountRate}%OFF</span>
+                      <>
+                        {formatYen(item.originalPrice)} - {formatYen(item.discountAmount)} ={" "}
+                        {formatYen(item.priceAfterDiscount)}（
+                        <span className="text-[#22c55e] font-semibold">{item.discountRate}%OFF</span>）
+                      </>
                     ) : (
-                      <span className="text-accent font-semibold">+{formatYen(-item.discountAmount)}</span>
+                      <>
+                        {formatYen(item.originalPrice)} + {formatYen(-item.discountAmount)} ={" "}
+                        {formatYen(item.priceAfterDiscount)}（
+                        <span className="text-accent font-semibold">+{formatYen(-item.discountAmount)}</span>）
+                      </>
                     )}
-                    ）
                   </span>
                   <div className="flex gap-1 shrink-0">
                     <button
