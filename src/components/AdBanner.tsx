@@ -4,6 +4,8 @@ import { useEffect } from "react";
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
+let adsensePushed = false;
+
 type AdBannerProps = {
   slot?: string;
   format?: "auto" | "rectangle" | "horizontal" | "vertical";
@@ -12,13 +14,13 @@ type AdBannerProps = {
 
 export function AdBanner({ slot = "1234567890", format = "auto", className = "" }: AdBannerProps) {
   useEffect(() => {
-    if (ADSENSE_CLIENT && typeof window !== "undefined") {
-      try {
-        ((window as unknown as { adsbygoogle: unknown[] }).adsbygoogle =
-          (window as unknown as { adsbygoogle: unknown[] }).adsbygoogle || []).push({});
-      } catch {
-        // ignore
-      }
+    if (!ADSENSE_CLIENT || typeof window === "undefined" || adsensePushed) return;
+    try {
+      adsensePushed = true;
+      ((window as unknown as { adsbygoogle: unknown[] }).adsbygoogle =
+        (window as unknown as { adsbygoogle: unknown[] }).adsbygoogle || []).push({});
+    } catch {
+      adsensePushed = false;
     }
   }, []);
 
