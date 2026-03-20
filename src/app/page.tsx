@@ -148,7 +148,6 @@ export default function Home() {
   const [total, setTotal] = useState<string>("");
   const [target, setTarget] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
-  const [quantity, setQuantity] = useState<string>("");
   const [secondBagUnitPrice, setSecondBagUnitPrice] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [compareList, setCompareList] = useState<CompareItem[]>([]);
@@ -160,24 +159,16 @@ export default function Home() {
   useEffect(() => setMounted(true), []);
 
   const unitPriceNum = parseFloat(unitPrice) || 0;
-  const quantityNum = parseFloat(quantity) || 0;
   const secondBagUnitPriceNum = parseFloat(secondBagUnitPrice) || 0;
+  const compareQuantity = 2; // 購入個数は2で固定
   const actualPriceNum =
-    unitPriceNum > 0 && quantityNum > 0
-      ? (() => {
-          let sum = unitPriceNum; // 1袋目
-          if (quantityNum >= 2 && secondBagUnitPriceNum > 0) {
-            sum += secondBagUnitPriceNum; // 2袋目
-          } else if (quantityNum >= 2) {
-            sum += unitPriceNum; // 2袋目（2袋目単価未入力時は通常価格）
-          }
-          if (quantityNum >= 3) {
-            sum += unitPriceNum * (quantityNum - 2); // 3袋目以降は通常価格
-          }
-          return Math.round(sum * 100) / 100;
-        })()
+    unitPriceNum > 0
+      ? Math.round(
+          (unitPriceNum + (secondBagUnitPriceNum > 0 ? secondBagUnitPriceNum : unitPriceNum)) *
+            100
+        ) / 100
       : 0;
-  const discountResult = calcDiscount(unitPriceNum, quantityNum, actualPriceNum);
+  const discountResult = calcDiscount(unitPriceNum, compareQuantity, actualPriceNum);
 
   const totalNum = parseFloat(total) || 0;
   const targetNum = parseFloat(target) || 0;
@@ -243,23 +234,22 @@ export default function Home() {
     setTotal("");
     setTarget("");
     setUnitPrice("");
-    setQuantity("");
     setSecondBagUnitPrice("");
   }, []);
 
   const addToCompareList = useCallback(() => {
-    if (!discountResult || quantityNum <= 0) return;
+    if (!discountResult || unitPriceNum <= 0) return;
     const item: CompareItem = {
       id: crypto.randomUUID(),
       unitPrice: unitPriceNum,
-      quantity: quantityNum,
+      quantity: compareQuantity,
       actualPrice: discountResult.actualPrice,
       savingAmount: discountResult.savingAmount,
       discountRate: discountResult.discountRate,
       createdAt: Date.now(),
     };
     setCompareList((prev) => [item, ...prev].slice(0, 50));
-  }, [discountResult, quantityNum, unitPriceNum]);
+  }, [discountResult, unitPriceNum, compareQuantity]);
 
   const removeFromCompareList = (id: string) => {
     setCompareList((prev) => prev.filter((c) => c.id !== id));
@@ -510,28 +500,16 @@ export default function Home() {
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
           </label>
-          <label className="block">
-            <span className="text-xs sm:text-sm font-medium text-label">購入個数</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0"
-              value={quantity}
-              onChange={(e) => setQuantity(sanitizeNumericInput(e.target.value))}
-              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
-            />
-          </label>
         </div>
 
         {/* 比較モード結果 */}
         <div className="shrink-0 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm overflow-hidden">
-          {quantityNum > 0 ? (
+          {unitPriceNum > 0 ? (
             <ul className="divide-y divide-[var(--border)]">
               <li className="flex justify-between items-center gap-3 py-3 px-4">
                 <span className="text-sm text-muted">通常の合計金額</span>
                 <span className="text-base sm:text-lg font-semibold text-foreground tabular-nums">
-                  {formatYen(unitPriceNum * quantityNum)}
+                  {formatYen(unitPriceNum * compareQuantity)}
                 </span>
               </li>
               <li className="flex justify-between items-center gap-3 py-3 px-4">
@@ -553,7 +531,7 @@ export default function Home() {
             </ul>
           ) : (
             <div className="py-8 text-center">
-              <p className="text-result-empty text-lg">通常時の単価と購入個数を入力</p>
+              <p className="text-result-empty text-lg">通常時の単価と2袋目の単価を入力</p>
             </div>
           )}
         </div>
@@ -561,14 +539,14 @@ export default function Home() {
         {/* 比較モード コピー・追加 */}
         <button
           onClick={() => handleCopy()}
-          disabled={!discountResult || quantityNum <= 0 || discountResult.savingAmount <= 0}
+          disabled={!discountResult || unitPriceNum <= 0 || discountResult.savingAmount <= 0}
           className="shrink-0 w-full h-11 sm:h-14 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-[#ff6b6b]/30"
         >
           <Copy size={18} className="sm:w-5 sm:h-5" />
           結果をコピー
         </button>
 
-        {discountResult && quantityNum > 0 && discountResult.savingAmount > 0 && (
+        {discountResult && unitPriceNum > 0 && discountResult.savingAmount > 0 && (
           <button
             onClick={addToCompareList}
             className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
