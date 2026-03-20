@@ -143,7 +143,7 @@ function useAnimatedValue(target: number, isPercent: boolean, duration = 300) {
 
 export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>("percent");
-  const [showDiscountedValue, setShowDiscountedValue] = useState(false);
+  const [isInverted, setIsInverted] = useState(false);
   const [total, setTotal] = useState<string>("");
   const [target, setTarget] = useState<string>("");
   const [originalPrice, setOriginalPrice] = useState<string>("");
@@ -180,7 +180,8 @@ export default function Home() {
 
   const percent = calcPercent(totalNum, targetNum);
   const displayValue = percent ?? 0;
-  const animatedPercent = useAnimatedValue(displayValue, true, 350);
+  const displayTarget = isInverted ? 100 - displayValue : displayValue;
+  const animatedPercent = useAnimatedValue(displayTarget, true, 350);
 
   const addToHistory = useCallback(() => {
     if (percent === null || totalNum <= 0) return;
@@ -256,7 +257,7 @@ export default function Home() {
     setDiscountRate("");
     setUnitPrice("");
     setSecondBagUnitPrice("");
-    setShowDiscountedValue(false);
+    setIsInverted(false);
   }, []);
 
   const addToCompareList = useCallback(() => {
@@ -392,38 +393,21 @@ export default function Home() {
 
         {/* Result display */}
         <div className="shrink-0 flex flex-col items-center justify-center py-3 sm:py-6 relative">
-          <div className="flex items-center justify-center gap-2 sm:gap-3">
-            <div
-              key={displayValue}
-              className={`text-5xl sm:text-6xl md:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? "text-accent" : "text-result-empty"}`}
-            >
-              {percent !== null
-                ? showDiscountedValue
-                  ? Math.round(totalNum - targetNum)
-                  : animatedPercent
-                : "—"}
-            </div>
-            {percent !== null && totalNum > 0 && (
-              <button
-                onClick={() => setShowDiscountedValue((v) => !v)}
-                className="p-2 sm:p-2.5 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors shrink-0"
-                aria-label={showDiscountedValue ? "割合を表示" : "割引された数値を表示"}
-                title={showDiscountedValue ? "割合を表示" : "割引された数値を表示"}
-              >
-                <ArrowLeftRight size={24} className="sm:w-6 sm:h-6" />
-              </button>
-            )}
+          <div
+            key={`${displayValue}-${isInverted}`}
+            className={`text-5xl sm:text-6xl md:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? (isInverted ? "text-[#22c55e]" : "text-accent") : "text-result-empty"}`}
+          >
+            {percent !== null ? animatedPercent : "—"}
           </div>
           {percent !== null && totalNum > 0 && (
-            <p className="text-muted mt-2 text-sm relative z-10">
-              {showDiscountedValue ? (
-                <>割引された数値: {Math.round(totalNum - targetNum)}</>
-              ) : (
-                <>
-                  {targetNum} / {totalNum}
-                </>
-              )}
-            </p>
+            <button
+              onClick={() => setIsInverted((v) => !v)}
+              className={`mt-2 p-2 sm:p-2.5 rounded-lg transition-colors shrink-0 ${isInverted ? "bg-accent/20 text-accent" : "text-muted hover:text-accent hover:bg-subtle"}`}
+              aria-label={isInverted ? "割合を表示" : "残り（補数）を表示"}
+              title={isInverted ? "割合を表示" : "残り（補数）を表示"}
+            >
+              <ArrowLeftRight size={24} className="sm:w-6 sm:h-6" />
+            </button>
           )}
         </div>
 
