@@ -237,10 +237,6 @@ export default function Home() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && !e.repeat) {
-        e.preventDefault();
-        if (mode === "normal" ? percent !== null : reverseTarget !== null) handleCopy();
-      }
       if (e.key === "Escape") {
         e.preventDefault();
         handleClear();
@@ -248,7 +244,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleCopy, handleClear, mode, percent, reverseTarget]);
+  }, [handleClear]);
 
   const removeFromHistory = (id: string) => {
     setHistory((prev) => prev.filter((h) => h.id !== id));
@@ -308,7 +304,7 @@ export default function Home() {
         )}
         <h1 className="text-2xl font-bold tracking-tight text-accent">{APP_NAME}</h1>
         <p className="text-sm text-muted mt-1">全体と成果を入力して割合を即座に算出</p>
-        <p className="text-xs text-muted mt-2 opacity-80">Enter: コピー / Esc: クリア</p>
+        <p className="text-xs text-muted mt-2 opacity-80">Esc: クリア</p>
       </header>
 
       <main className="flex-1 max-w-md mx-auto w-full px-4 py-8 flex flex-col gap-8">
