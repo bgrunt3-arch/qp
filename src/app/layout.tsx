@@ -15,8 +15,17 @@ const geistMono = Geist_Mono({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://qp.vercel.app";
 
+const iconVersion = "2";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  icons: {
+    icon: [
+      { url: "/icon-192.png?v=" + iconVersion, sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png?v=" + iconVersion, sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
+  },
   title: {
     default: "QuickPercent - 割合を即座に算出",
     template: "%s | QuickPercent",

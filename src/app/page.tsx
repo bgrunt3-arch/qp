@@ -355,6 +355,7 @@ export default function Home() {
               placeholder="0"
               value={total}
               onChange={(e) => setTotal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
           </label>
@@ -367,6 +368,7 @@ export default function Home() {
                 placeholder="0"
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                 className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
               />
             </label>
@@ -379,6 +381,7 @@ export default function Home() {
                 placeholder="0"
                 value={percentInput}
                 onChange={(e) => setPercentInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                 className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
               />
             </label>
