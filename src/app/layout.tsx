@@ -79,9 +79,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <script
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-          crossOrigin="anonymous"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var s=document.createElement('script');s.async=true;s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}';s.crossOrigin='anonymous';document.head.appendChild(s);})();`,
+          }}
         />
         <ThemeProvider>
           <ServiceWorkerRegister />
