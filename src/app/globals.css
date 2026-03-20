@@ -1,16 +1,47 @@
 @import "tailwindcss";
 
+/* ライトモード（デフォルト） */
 :root {
+  --background: #fffbf5;
+  --foreground: #1a1a1a;
+  --card-bg: #f5f0e8;
+  --border: #e0d8cc;
+  --muted: #6b7280;
+  --accent: #ff6b6b;
+  --subtle: #ede8e0;
+  --input: #faf8f5;
+  --result-empty: #9ca3af;
+  --label: #4b5563;
+  --toast: #ff6b6b;
+}
+
+/* ダークモード（next-themes が html に class="dark" を付与） */
+.dark {
   --background: #121212;
   --foreground: #ffffff;
-  --spotify-green: #1db954;
   --card-bg: #181818;
   --border: #282828;
+  --muted: #a1a1aa;
+  --accent: #ff6b6b;
+  --subtle: #27272a;
+  --input: #1f1f1f;
+  --result-empty: #71717a;
+  --label: #d4d4d8;
+  --toast: #ff6b6b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-page: var(--background);
+  --color-card: var(--card-bg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-subtle: var(--subtle);
+  --color-input: var(--input);
+  --color-result-empty: var(--result-empty);
+  --color-label: var(--label);
+  --color-toast: var(--toast);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

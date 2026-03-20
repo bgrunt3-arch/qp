@@ -106,12 +106,13 @@ function saveCompareList(items: CompareItem[]): void {
   });
 }
 
-function calcDiscount(unitPrice: number, quantity: number, actualPrice: number) {
+function calcDiscountFromRate(unitPrice: number, quantity: number, discountRatePercent: number) {
   const totalNormalPrice = unitPrice * quantity;
   if (totalNormalPrice <= 0 || !Number.isFinite(totalNormalPrice)) return null;
-  const savingAmount = totalNormalPrice - actualPrice;
-  const discountRate = totalNormalPrice > 0 ? (savingAmount / totalNormalPrice) * 100 : 0;
-  return { totalNormalPrice, savingAmount, discountRate };
+  const rate = Math.max(0, Math.min(100, discountRatePercent)) / 100;
+  const savingAmount = Math.round(totalNormalPrice * rate * 100) / 100;
+  const actualPrice = Math.round((totalNormalPrice - savingAmount) * 100) / 100;
+  return { totalNormalPrice, savingAmount, discountRate: discountRatePercent, actualPrice };
 }
 
 function useAnimatedValue(target: number, isPercent: boolean, duration = 300) {
@@ -151,7 +152,7 @@ export default function Home() {
   const [percentInput, setPercentInput] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
-  const [actualPrice, setActualPrice] = useState<string>("");
+  const [discountRateInput, setDiscountRateInput] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [compareList, setCompareList] = useState<CompareItem[]>([]);
   const [copied, setCopied] = useState(false);
@@ -163,8 +164,8 @@ export default function Home() {
 
   const unitPriceNum = parseFloat(unitPrice) || 0;
   const quantityNum = parseFloat(quantity) || 0;
-  const actualPriceNum = parseFloat(actualPrice) || 0;
-  const discountResult = calcDiscount(unitPriceNum, quantityNum, actualPriceNum);
+  const discountRateNum = parseFloat(discountRateInput) || 0;
+  const discountResult = calcDiscountFromRate(unitPriceNum, quantityNum, discountRateNum);
 
   const totalNum = parseFloat(total) || 0;
   const targetNum = parseFloat(target) || 0;
@@ -262,7 +263,7 @@ export default function Home() {
     setPercentInput("");
     setUnitPrice("");
     setQuantity("");
-    setActualPrice("");
+    setDiscountRateInput("");
   }, []);
 
   const addToCompareList = useCallback(() => {
@@ -271,13 +272,13 @@ export default function Home() {
       id: crypto.randomUUID(),
       unitPrice: unitPriceNum,
       quantity: quantityNum,
-      actualPrice: actualPriceNum,
+      actualPrice: discountResult.actualPrice,
       savingAmount: discountResult.savingAmount,
       discountRate: discountResult.discountRate,
       createdAt: Date.now(),
     };
     setCompareList((prev) => [item, ...prev].slice(0, 50));
-  }, [discountResult, quantityNum, unitPriceNum, actualPriceNum]);
+  }, [discountResult, quantityNum, unitPriceNum]);
 
   const removeFromCompareList = (id: string) => {
     setCompareList((prev) => prev.filter((c) => c.id !== id));
@@ -592,22 +593,30 @@ export default function Home() {
             />
           </label>
           <label className="block">
-            <span className="text-xs sm:text-sm font-medium text-label">実際の支払い合計（円）</span>
+            <span className="text-xs sm:text-sm font-medium text-label">割引率（%）</span>
             <input
               type="number"
               inputMode="decimal"
               placeholder="0"
-              value={actualPrice}
-              onChange={(e) => setActualPrice(e.target.value)}
+              value={discountRateInput}
+              onChange={(e) => setDiscountRateInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
           </label>
+          {discountResult && quantityNum > 0 && (
+            <div className="rounded-lg sm:rounded-xl bg-card border border-page px-3 sm:px-4 py-2.5 sm:py-3">
+              <span className="text-xs sm:text-sm text-muted">実際の支払い合計</span>
+              <p className="text-lg sm:text-xl font-bold text-accent mt-0.5">
+                {formatYen(discountResult.actualPrice)}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 比較モード結果 */}
         <div className="shrink-0 flex flex-col items-center justify-center py-3 sm:py-6 relative">
-          {discountResult && quantityNum > 0 ? (
+          {discountResult && quantityNum > 0 && discountRateNum > 0 ? (
             discountResult.savingAmount > 0 ? (
               <div key={discountResult.savingAmount} className="text-center result-pop">
                 <p className="text-sm sm:text-base text-muted mb-2">お得な金額</p>
@@ -619,15 +628,11 @@ export default function Home() {
                   安く購入できます！
                 </p>
               </div>
-            ) : discountResult.savingAmount < 0 ? (
-              <div className="text-center">
-                <p className="text-muted text-sm">通常価格より高くなっています</p>
-              </div>
-            ) : (
-              <div className="text-center">
-                <p className="text-muted text-sm">割引なし</p>
-              </div>
-            )
+            ) : null
+          ) : discountResult && quantityNum > 0 && discountRateNum === 0 ? (
+            <div className="text-center">
+              <p className="text-muted text-sm">割引なし</p>
+            </div>
           ) : (
             <p className="text-result-empty text-2xl">—</p>
           )}
