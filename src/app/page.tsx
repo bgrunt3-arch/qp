@@ -204,7 +204,7 @@ export default function Home() {
   const handleCopy = useCallback(async () => {
     if (mode === "normal") {
       if (percent === null) return;
-      const text = `${targetNum} は ${totalNum} の ${percent}% です`;
+      const text = `${percent}%`;
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
@@ -216,7 +216,7 @@ export default function Home() {
       }
     } else {
       if (reverseTarget === null) return;
-      const text = `${reverseTarget} は ${totalNum} の ${percentInputNum}% です`;
+      const text = String(reverseTarget);
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
@@ -227,7 +227,7 @@ export default function Home() {
         // fallback
       }
     }
-  }, [mode, percent, totalNum, targetNum, percentInputNum, reverseTarget]);
+  }, [mode, percent, reverseTarget]);
 
   const handleClear = useCallback(() => {
     setTotal("");
