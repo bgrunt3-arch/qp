@@ -143,7 +143,7 @@ export default function Home() {
   const [target, setTarget] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
-  const [actualPrice, setActualPrice] = useState<string>("");
+  const [discountRate, setDiscountRate] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [compareList, setCompareList] = useState<CompareItem[]>([]);
   const [copied, setCopied] = useState(false);
@@ -155,7 +155,11 @@ export default function Home() {
 
   const unitPriceNum = parseFloat(unitPrice) || 0;
   const quantityNum = parseFloat(quantity) || 0;
-  const actualPriceNum = parseFloat(actualPrice) || 0;
+  const discountRateNum = Math.min(100, Math.max(0, parseFloat(discountRate) || 0));
+  const actualPriceNum =
+    unitPriceNum > 0 && quantityNum > 0
+      ? Math.round(unitPriceNum * quantityNum * (1 - discountRateNum / 100) * 100) / 100
+      : 0;
   const discountResult = calcDiscount(unitPriceNum, quantityNum, actualPriceNum);
 
   const totalNum = parseFloat(total) || 0;
@@ -223,7 +227,7 @@ export default function Home() {
     setTarget("");
     setUnitPrice("");
     setQuantity("");
-    setActualPrice("");
+    setDiscountRate("");
   }, []);
 
   const addToCompareList = useCallback(() => {
@@ -490,13 +494,15 @@ export default function Home() {
             />
           </label>
           <label className="block">
-            <span className="text-xs sm:text-sm font-medium text-label">実際の支払い合計（円）</span>
+            <span className="text-xs sm:text-sm font-medium text-label">割引率（%）</span>
             <input
               type="number"
               inputMode="decimal"
               placeholder="0"
-              value={actualPrice}
-              onChange={(e) => setActualPrice(e.target.value)}
+              min={0}
+              max={100}
+              value={discountRate}
+              onChange={(e) => setDiscountRate(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
@@ -513,7 +519,7 @@ export default function Home() {
                   {formatYen(unitPriceNum * quantityNum)}
                 </span>
               </li>
-              {actualPriceNum > 0 && discountResult && (
+              {discountResult && (
                 <>
                   <li className="flex justify-between items-center gap-3 py-3 px-4">
                     <span className="text-sm text-muted">実際の支払い合計</span>
@@ -522,15 +528,10 @@ export default function Home() {
                     </span>
                   </li>
                   <li className="flex justify-between items-center gap-3 py-3 px-4">
-                    <span className="text-sm text-muted">差額</span>
+                    <span className="text-sm text-muted">差額（割引率）</span>
                     <span className={`text-base sm:text-lg font-bold tabular-nums ${discountResult.savingAmount > 0 ? "text-[#22c55e]" : discountResult.savingAmount < 0 ? "text-accent" : "text-foreground"}`}>
                       {discountResult.savingAmount > 0 ? `-${formatYen(discountResult.savingAmount)}` : discountResult.savingAmount < 0 ? `+${formatYen(-discountResult.savingAmount)}` : formatYen(0)}
-                    </span>
-                  </li>
-                  <li className="flex justify-between items-center gap-3 py-3 px-4">
-                    <span className="text-sm text-muted">割引率</span>
-                    <span className={`text-base sm:text-lg font-bold tabular-nums ${discountResult.savingAmount > 0 ? "text-[#22c55e]" : discountResult.savingAmount < 0 ? "text-accent" : "text-foreground"}`}>
-                      {discountResult.discountRate.toFixed(1)}%
+                      （{discountResult.discountRate.toFixed(1)}%）
                     </span>
                   </li>
                 </>
