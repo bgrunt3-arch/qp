@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Copy, Trash2, Share2, Sun, Moon, Percent } from "lucide-react";
+import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag } from "lucide-react";
 
 const STORAGE_KEY = "percent-quick-history";
 const COMPARE_STORAGE_KEY = "percent-quick-compare";
 const APP_NAME = "QuickPercent";
 
-type AppMode = "percent" | "compare";
+type AppMode = "percent" | "compare" | "discount";
 
 type HistoryItem = {
   id: string;
@@ -147,6 +147,8 @@ export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>("percent");
   const [total, setTotal] = useState<string>("");
   const [target, setTarget] = useState<string>("");
+  const [originalPrice, setOriginalPrice] = useState<string>("");
+  const [discountRate, setDiscountRate] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [secondBagUnitPrice, setSecondBagUnitPrice] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -172,6 +174,10 @@ export default function Home() {
 
   const totalNum = parseFloat(total) || 0;
   const targetNum = parseFloat(target) || 0;
+  const originalPriceNum = parseFloat(originalPrice) || 0;
+  const discountRateNum = Math.min(100, Math.max(0, parseFloat(discountRate) || 0));
+  const discountAmount = originalPriceNum > 0 ? Math.round(originalPriceNum * (discountRateNum / 100) * 100) / 100 : 0;
+  const priceAfterDiscount = originalPriceNum > 0 ? Math.round(originalPriceNum * (1 - discountRateNum / 100) * 100) / 100 : 0;
 
   const percent = calcPercent(totalNum, targetNum);
   const displayValue = percent ?? 0;
@@ -217,6 +223,20 @@ export default function Home() {
       }
       return;
     }
+    if (appMode === "discount") {
+      if (originalPriceNum <= 0) return;
+      const text = `割引後 ${formatYen(priceAfterDiscount)}（${formatYen(discountAmount)} お得）`;
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setToastVisible(true);
+        setTimeout(() => setCopied(false), 1500);
+        setTimeout(() => setToastVisible(false), 2500);
+      } catch {
+        // fallback
+      }
+      return;
+    }
     if (percent === null) return;
     const text = `${percent}%`;
     try {
@@ -228,11 +248,13 @@ export default function Home() {
     } catch {
       // fallback
     }
-  }, [appMode, percent, discountResult]);
+  }, [appMode, percent, discountResult, originalPriceNum, priceAfterDiscount, discountAmount]);
 
   const handleClear = useCallback(() => {
     setTotal("");
     setTarget("");
+    setOriginalPrice("");
+    setDiscountRate("");
     setUnitPrice("");
     setSecondBagUnitPrice("");
   }, []);
@@ -281,13 +303,6 @@ export default function Home() {
     }
   };
 
-  const applyPreset = (p: number) => {
-    if (totalNum > 0) {
-      const val = Math.round((totalNum * p) / 100 * 100) / 100;
-      setTarget(String(val));
-    }
-  };
-
   const progressValue = percent !== null ? Math.min(100, Math.max(0, percent)) : 0;
 
   return (
@@ -315,30 +330,39 @@ export default function Home() {
       </header>
 
       <main className="flex-1 min-h-0 max-w-md mx-auto w-full px-3 sm:px-4 py-3 sm:py-6 flex flex-col gap-3 sm:gap-6 overflow-hidden sm:overflow-visible">
-        {/* App mode toggle: 割合 / セット割 */}
+        {/* App mode toggle: 割合 / セット割 / 割引 */}
         <div className="shrink-0 flex rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
           <button
             onClick={() => setAppMode("percent")}
-            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
               appMode === "percent" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
             }`}
           >
-            <Percent size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <Percent size={14} className="sm:w-4 sm:h-4" />
             割合
           </button>
           <button
             onClick={() => setAppMode("compare")}
-            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
               appMode === "compare" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
             }`}
           >
             セット割
           </button>
+          <button
+            onClick={() => setAppMode("discount")}
+            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              appMode === "discount" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
+            }`}
+          >
+            <Tag size={14} className="sm:w-4 sm:h-4" />
+            割引
+          </button>
         </div>
 
         {appMode === "percent" ? (
           <>
-        {/* Input fields */}
+        {/* 割合モード: 全体数・成果数 */}
         <div className="shrink-0 space-y-2 sm:space-y-4">
           <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">全体数</span>
@@ -365,21 +389,6 @@ export default function Home() {
             />
           </label>
         </div>
-
-        {/* クイックプリセット */}
-        {totalNum > 0 && (
-          <div className="shrink-0 flex gap-1.5 sm:gap-2">
-            {QUICK_PRESETS.map((p) => (
-              <button
-                key={p}
-                onClick={() => applyPreset(p)}
-                className="flex-1 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-card text-muted border border-page hover:border-accent hover:text-accent hover:bg-subtle transition-colors shadow-sm"
-              >
-                {p}%
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Result display */}
         <div className="shrink-0 flex flex-col items-center justify-center py-3 sm:py-6 relative">
@@ -471,6 +480,89 @@ export default function Home() {
             </ul>
           </section>
         )}
+          </>
+        ) : appMode === "discount" ? (
+          <>
+        <div className="shrink-0 space-y-2 sm:space-y-4">
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">元の価格（円）</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={originalPrice}
+              onChange={(e) => setOriginalPrice(sanitizeNumericInput(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">割引率（%）</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={discountRate}
+              onChange={(e) => setDiscountRate(sanitizeNumericInput(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+        </div>
+
+        {/* 割引モード クイックプリセット */}
+        {originalPriceNum > 0 && (
+          <div className="shrink-0 flex gap-1.5 sm:gap-2">
+            {QUICK_PRESETS.map((p) => (
+              <button
+                key={p}
+                onClick={() => setDiscountRate(String(p))}
+                className="flex-1 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-card text-muted border border-page hover:border-accent hover:text-accent hover:bg-subtle transition-colors shadow-sm"
+              >
+                {p}%
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 割引モード 結果 */}
+        <div className="shrink-0 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm overflow-hidden">
+          {originalPriceNum > 0 ? (
+            <ul className="divide-y divide-[var(--border)]">
+              <li className="flex justify-between items-center gap-3 py-3 px-4">
+                <span className="text-sm text-muted">割引率</span>
+                <span className="text-base sm:text-lg font-semibold text-foreground tabular-nums">
+                  {discountRateNum}%
+                </span>
+              </li>
+              <li className="flex justify-between items-center gap-3 py-3 px-4">
+                <span className="text-sm text-muted">割引額</span>
+                <span className="text-base sm:text-lg font-bold text-[#22c55e] tabular-nums">
+                  -{formatYen(discountAmount)}
+                </span>
+              </li>
+              <li className="flex justify-between items-center gap-3 py-3 px-4">
+                <span className="text-sm text-muted">割引後の価格</span>
+                <span className="text-base sm:text-lg font-semibold text-foreground tabular-nums">
+                  {formatYen(priceAfterDiscount)}
+                </span>
+              </li>
+            </ul>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="text-result-empty text-lg">元の価格を入力</p>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => handleCopy()}
+          disabled={originalPriceNum <= 0}
+          className="shrink-0 w-full h-11 sm:h-14 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40 transition-all shadow-md shadow-[#ff6b6b]/30"
+        >
+          <Copy size={18} className="sm:w-5 sm:h-5" />
+          結果をコピー
+        </button>
           </>
         ) : (
           /* セット割モード */
