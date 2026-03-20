@@ -4,8 +4,6 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
-const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-6880608133692345";
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -76,13 +74,14 @@ export default function RootLayout({
         <link rel="icon" href="/icon.png" sizes="512x512" type="image/png" />
         <link rel="apple-touch-icon" href="/icon.png" sizes="512x512" />
         <link rel="manifest" href="/manifest.webmanifest" />
+        {/* AdSense: head内に直接配置（クローラー検証用） */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6880608133692345"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="min-h-full flex flex-col">
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var s=document.createElement('script');s.async=true;s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}';s.crossOrigin='anonymous';document.head.appendChild(s);})();`,
-          }}
-        />
         <ThemeProvider>
           <ServiceWorkerRegister />
           {children}
