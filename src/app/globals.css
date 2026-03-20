@@ -55,6 +55,13 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* 入力フィールドの操作性を確保 */
+input[type="text"] {
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

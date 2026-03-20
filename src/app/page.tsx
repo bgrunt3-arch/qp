@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown } from "lucide-react";
+import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown, Crown, X } from "lucide-react";
+import { AdBanner } from "@/components/AdBanner";
+import { usePremium } from "@/hooks/usePremium";
 
 const STORAGE_KEY = "percent-quick-history";
 const COMPARE_STORAGE_KEY = "percent-quick-compare";
@@ -40,9 +42,12 @@ type DiscountHistoryItem = {
   createdAt: number;
 };
 
-/** iOSのtype="number"の二重表示バグを避けるため、数値のみ許可する */
+/** iOSのtype="number"の二重表示バグを避けるため、数値のみ許可する。全角数字も半角に変換 */
 function sanitizeNumericInput(value: string): string {
-  const filtered = value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+  const fullToHalf = value.replace(/[０-９]/g, (c) =>
+    String.fromCharCode(c.charCodeAt(0) - 0xfee0)
+  );
+  const filtered = fullToHalf.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
   return filtered;
 }
 
@@ -186,8 +191,13 @@ export default function Home() {
   const [compareList, setCompareList] = useState<CompareItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("コピーしました");
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
+  const { isPremium, setPremium, mounted: premiumMounted } = usePremium();
   const [mounted, setMounted] = useState(false);
+
+  const premiumPurchaseUrl = process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL;
 
   useEffect(() => setMounted(true), []);
 
@@ -404,26 +414,43 @@ export default function Home() {
       {/* Toast */}
       {toastVisible && (
         <div className="fixed bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 sm:px-6 sm:py-3 rounded-xl bg-toast text-white font-semibold text-sm sm:text-base shadow-lg shadow-[#ff6b6b]/30 toast-enter">
-          コピーしました
+          {toastMessage}
         </div>
       )}
 
       <header className="shrink-0 py-2 sm:py-4 px-3 sm:px-4 text-center border-b border-page bg-card/80 backdrop-blur-sm relative">
         {mounted && (
-          <button
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
-            aria-label={resolvedTheme === "dark" ? "ライトモードに切り替え" : "ダークモードに切り替え"}
-          >
-            {resolvedTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <>
+            <button
+              onClick={() => setPremiumModalOpen(true)}
+              className={`absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-lg transition-colors ${
+                isPremium ? "text-amber-500" : "text-muted hover:text-accent hover:bg-subtle"
+              }`}
+              aria-label={isPremium ? "Premium" : "Premiumを購入"}
+            >
+              <Crown size={18} />
+            </button>
+            <button
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+              aria-label={resolvedTheme === "dark" ? "ライトモードに切り替え" : "ダークモードに切り替え"}
+            >
+              {resolvedTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          </>
         )}
         <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-accent">{APP_NAME}</h1>
         <p className="text-xs sm:text-sm text-muted mt-0.5 sm:mt-1 hidden sm:block">全体と成果を入力して割合を即座に算出</p>
         <p className="text-[10px] sm:text-xs text-muted mt-1 sm:mt-2 opacity-80">Esc: クリア</p>
       </header>
 
-      <main className="flex-1 min-h-0 max-w-md mx-auto w-full px-3 sm:px-4 py-3 sm:py-6 flex flex-col gap-3 sm:gap-6 overflow-hidden sm:overflow-visible">
+      {premiumMounted && !isPremium && (
+        <div className="shrink-0 px-3 sm:px-4 py-2 isolate">
+          <AdBanner format="horizontal" className="max-w-md mx-auto" />
+        </div>
+      )}
+
+      <main className="flex-1 min-h-0 max-w-md mx-auto w-full px-3 sm:px-4 py-3 sm:py-6 flex flex-col gap-3 sm:gap-6 overflow-y-auto overflow-x-hidden sm:overflow-visible relative z-10">
         {/* App mode toggle: 割合 / セット割 / 割引 */}
         <div className="shrink-0 flex rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
           <button
@@ -463,6 +490,7 @@ export default function Home() {
             <input
               type="text"
               inputMode="decimal"
+              autoComplete="off"
               placeholder="0"
               value={total}
               onChange={(e) => setTotal(sanitizeNumericInput(e.target.value))}
@@ -475,6 +503,7 @@ export default function Home() {
             <input
               type="text"
               inputMode="decimal"
+              autoComplete="off"
               placeholder="0"
               value={target}
               onChange={(e) => setTarget(sanitizeNumericInput(e.target.value))}
@@ -597,6 +626,7 @@ export default function Home() {
             <input
               type="text"
               inputMode="decimal"
+              autoComplete="off"
               placeholder="0"
               value={originalPrice}
               onChange={(e) => setOriginalPrice(sanitizeNumericInput(e.target.value))}
@@ -609,6 +639,7 @@ export default function Home() {
             <input
               type="text"
               inputMode="decimal"
+              autoComplete="off"
               placeholder="0"
               value={discountRate}
               onChange={(e) => setDiscountRate(sanitizeNumericInput(e.target.value))}
@@ -621,6 +652,7 @@ export default function Home() {
             <input
               type="text"
               inputMode="decimal"
+              autoComplete="off"
               placeholder="0"
               value={salePrice}
               onChange={(e) => setSalePrice(sanitizeNumericInput(e.target.value))}
@@ -747,6 +779,7 @@ export default function Home() {
             <input
               type="text"
               inputMode="decimal"
+              autoComplete="off"
               placeholder="0"
               value={unitPrice}
               onChange={(e) => setUnitPrice(sanitizeNumericInput(e.target.value))}
@@ -759,6 +792,7 @@ export default function Home() {
             <input
               type="text"
               inputMode="decimal"
+              autoComplete="off"
               placeholder="0"
               value={secondBagUnitPrice}
               onChange={(e) => setSecondBagUnitPrice(sanitizeNumericInput(e.target.value))}
@@ -863,6 +897,67 @@ export default function Home() {
           </>
         )}
       </main>
+
+      {premiumMounted && !isPremium && (
+        <div className="shrink-0 px-3 sm:px-4 py-3 border-t border-page isolate">
+          <AdBanner format="horizontal" className="max-w-md mx-auto" />
+        </div>
+      )}
+
+      {premiumModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setPremiumModalOpen(false)}>
+          <div
+            className="bg-card border border-page rounded-xl shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Crown className="text-amber-500" size={24} />
+                Premium
+              </h2>
+              <button
+                onClick={() => setPremiumModalOpen(false)}
+                className="p-2 rounded-lg text-muted hover:bg-subtle"
+                aria-label="閉じる"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-sm text-muted mb-4">
+              広告を非表示にして、快適にご利用いただけます。買い切りで永続的に有効です。
+            </p>
+            <p className="text-2xl font-bold text-accent mb-6">300円</p>
+            {isPremium ? (
+              <p className="text-sm text-[#22c55e] font-medium">ご購入済みです</p>
+            ) : premiumPurchaseUrl ? (
+              <a
+                href={premiumPurchaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-3 text-center rounded-xl font-semibold bg-accent text-white hover:opacity-90"
+              >
+                購入する
+              </a>
+            ) : (
+              <button
+                onClick={() => {
+                  setPremium(true);
+                  setPremiumModalOpen(false);
+                  setToastMessage("Premiumを購入しました");
+                  setToastVisible(true);
+                  setTimeout(() => {
+                    setToastVisible(false);
+                    setToastMessage("コピーしました");
+                  }, 2500);
+                }}
+                className="w-full py-3 rounded-xl font-semibold bg-accent text-white hover:opacity-90"
+              >
+                購入する（デモ）
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
