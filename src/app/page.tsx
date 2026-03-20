@@ -287,10 +287,6 @@ export default function Home() {
         : 0
       : Math.min(100, Math.max(0, percentInputNum));
 
-  const sliderMax = mode === "normal" && totalNum > 0 ? totalNum : 100;
-  const sliderValue = mode === "normal" ? targetNum : percentInputNum;
-  const showSlider = mode === "normal" ? totalNum > 0 : true;
-
   return (
     <div className="min-h-screen bg-page text-page flex flex-col">
       {/* Toast */}
@@ -369,50 +365,26 @@ export default function Home() {
           {mode === "normal" ? (
             <label className="block">
               <span className="text-sm font-medium text-label">成果数</span>
-              <div className="flex gap-3 mt-2">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="0"
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
-                />
-                {showSlider && (
-                  <input
-                    type="range"
-                    min={0}
-                    max={sliderMax}
-                    step={sliderMax > 1000 ? sliderMax / 100 : 1}
-                    value={Math.min(sliderValue, sliderMax)}
-                    onChange={(e) => setTarget(e.target.value)}
-                    className="w-24 self-center accent-[#ff6b6b]"
-                  />
-                )}
-              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="0"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+              />
             </label>
           ) : (
             <label className="block">
               <span className="text-sm font-medium text-label">目標%</span>
-              <div className="flex gap-3 mt-2">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="0"
-                  value={percentInput}
-                  onChange={(e) => setPercentInput(e.target.value)}
-                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
-                />
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={Math.min(percentInputNum, 100)}
-                  onChange={(e) => setPercentInput(e.target.value)}
-                  className="w-24 self-center accent-[#ff6b6b]"
-                />
-              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="0"
+                value={percentInput}
+                onChange={(e) => setPercentInput(e.target.value)}
+                className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+              />
             </label>
           )}
         </div>
