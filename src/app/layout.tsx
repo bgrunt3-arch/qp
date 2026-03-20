@@ -76,13 +76,13 @@ export default function RootLayout({
         <link rel="icon" href="/icon.png" sizes="512x512" type="image/png" />
         <link rel="apple-touch-icon" href="/icon.png" sizes="512x512" />
         <link rel="manifest" href="/manifest.webmanifest" />
+      </head>
+      <body className="min-h-full flex flex-col">
         <script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
           crossOrigin="anonymous"
         />
-      </head>
-      <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <ServiceWorkerRegister />
           {children}
