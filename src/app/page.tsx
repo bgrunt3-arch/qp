@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowLeftRight } from "lucide-react";
+import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown } from "lucide-react";
 
 const STORAGE_KEY = "percent-quick-history";
 const COMPARE_STORAGE_KEY = "percent-quick-compare";
@@ -406,7 +406,7 @@ export default function Home() {
               aria-label={isInverted ? "割合を表示" : "残り（補数）を表示"}
               title={isInverted ? "割合を表示" : "残り（補数）を表示"}
             >
-              <ArrowLeftRight size={24} className="sm:w-6 sm:h-6" />
+              <ArrowUpDown size={24} className="sm:w-6 sm:h-6" />
             </button>
           )}
         </div>
