@@ -13,10 +13,25 @@
 - コピー・共有
 - キーボードショートカット（Enter: コピー / Esc: クリア）
 
-## 開発
+## ローカルでテスト
 
 ```bash
 npm install
+npm run dev
+```
+
+ブラウザで **http://localhost:3000** を開く。
+
+環境変数は任意。ローカル用に `.env.local` を作成する場合:
+
+```bash
+cp .env.example .env.local
+# NEXT_PUBLIC_SITE_URL=http://localhost:3000 に変更
+```
+
+## 開発
+
+```bash
 npm run dev
 ```
 

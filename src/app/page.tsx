@@ -141,7 +141,6 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
-  const [milestone, setMilestone] = useState<50 | 100 | null>(null);
 
   const totalNum = parseFloat(total) || 0;
   const targetNum = parseFloat(target) || 0;
@@ -153,21 +152,6 @@ export default function Home() {
   const displayValue = mode === "normal" ? (percent ?? 0) : (reverseTarget ?? 0);
   const animatedPercent = useAnimatedValue(displayValue, mode === "normal", 350);
   const animatedTarget = useAnimatedValue(displayValue, false, 350);
-
-  useEffect(() => {
-    const p = mode === "normal" ? percent : percentInputNum;
-    if (p === 50) {
-      setMilestone(50);
-      const t = setTimeout(() => setMilestone(null), 800);
-      return () => clearTimeout(t);
-    }
-    if (p === 100) {
-      setMilestone(100);
-      const t = setTimeout(() => setMilestone(null), 800);
-      return () => clearTimeout(t);
-    }
-    setMilestone(null);
-  }, [percent, percentInputNum, mode]);
 
   const addToHistory = useCallback(() => {
     if (mode === "normal") {
@@ -298,49 +282,40 @@ export default function Home() {
         : 0
       : Math.min(100, Math.max(0, percentInputNum));
 
-  const getProgressColor = (p: number) => {
-    if (p < 30) return "bg-[#e53e3e]";
-    if (p < 70) return "bg-[#eab308]";
-    return "bg-[#1db954]";
-  };
-  const progressColor = getProgressColor(progressValue);
-  const percentTextColor =
-    progressValue < 30 ? "text-[#e53e3e]" : progressValue < 70 ? "text-[#eab308]" : "text-[#1db954]";
-
   const sliderMax = mode === "normal" && totalNum > 0 ? totalNum : 100;
   const sliderValue = mode === "normal" ? targetNum : percentInputNum;
   const showSlider = mode === "normal" ? totalNum > 0 : true;
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white flex flex-col">
+    <div className="min-h-screen bg-[#fffbf5] text-[#2d3748] flex flex-col">
       {/* Toast */}
       {toastVisible && (
-        <div className="fixed bottom-24 left-1/2 z-50 px-6 py-3 rounded-xl bg-[#1db954] text-black font-semibold shadow-lg toast-enter">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl bg-[#ff6b6b] text-white font-semibold shadow-lg shadow-[#ff6b6b]/30 toast-enter">
           コピーしました
         </div>
       )}
 
-      <header className="py-6 px-4 text-center border-b border-[#282828]">
-        <h1 className="text-2xl font-bold tracking-tight text-[#1db954]">{APP_NAME}</h1>
-        <p className="text-sm text-[#b3b3b3] mt-1">全体と成果を入力して割合を即座に算出</p>
-        <p className="text-xs text-[#6a6a6a] mt-2">Enter: コピー / Esc: クリア</p>
+      <header className="py-6 px-4 text-center border-b border-[#f0e6dc] bg-white/80 backdrop-blur-sm">
+        <h1 className="text-2xl font-bold tracking-tight text-[#ff6b6b]">{APP_NAME}</h1>
+        <p className="text-sm text-[#718096] mt-1">全体と成果を入力して割合を即座に算出</p>
+        <p className="text-xs text-[#a0aec0] mt-2">Enter: コピー / Esc: クリア</p>
       </header>
 
       <main className="flex-1 max-w-md mx-auto w-full px-4 py-8 flex flex-col gap-8">
         {/* Mode toggle */}
-        <div className="flex rounded-xl bg-[#282828] p-1">
+        <div className="flex rounded-2xl bg-white p-1.5 shadow-sm border border-[#f0e6dc]">
           <button
             onClick={() => setMode("normal")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-colors ${
-              mode === "normal" ? "bg-[#1db954] text-black" : "text-[#b3b3b3] hover:text-white"
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              mode === "normal" ? "bg-[#ff6b6b] text-white shadow-md shadow-[#ff6b6b]/30" : "text-[#718096] hover:text-[#ff6b6b] hover:bg-[#fff5f5]"
             }`}
           >
             通常
           </button>
           <button
             onClick={() => setMode("reverse")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-colors ${
-              mode === "reverse" ? "bg-[#1db954] text-black" : "text-[#b3b3b3] hover:text-white"
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              mode === "reverse" ? "bg-[#ff6b6b] text-white shadow-md shadow-[#ff6b6b]/30" : "text-[#718096] hover:text-[#ff6b6b] hover:bg-[#fff5f5]"
             }`}
           >
             <ArrowRightLeft size={18} />
@@ -350,13 +325,13 @@ export default function Home() {
 
         {/* 用途別テンプレート */}
         <div>
-          <span className="text-xs text-[#6a6a6a] block mb-2">用途別テンプレート</span>
+          <span className="text-xs text-[#718096] block mb-2">用途別テンプレート</span>
           <div className="flex flex-wrap gap-2">
             {TEMPLATES.map((t) => (
               <button
                 key={t.id}
                 onClick={() => applyTemplate(t)}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-[#282828] text-[#b3b3b3] hover:bg-[#404040] hover:text-white transition-colors"
+                className="px-3 py-1.5 rounded-xl text-sm font-medium bg-white text-[#718096] border border-[#f0e6dc] hover:border-[#ff6b6b] hover:text-[#ff6b6b] hover:bg-[#fff5f5] transition-colors shadow-sm"
               >
                 {t.label}
               </button>
@@ -367,19 +342,19 @@ export default function Home() {
         {/* Input fields */}
         <div className="space-y-4">
           <label className="block">
-            <span className="text-sm font-medium text-[#b3b3b3]">全体数 (vvv)</span>
+            <span className="text-sm font-medium text-[#4a5568]">全体数</span>
             <input
               type="number"
               inputMode="decimal"
               placeholder="0"
               value={total}
               onChange={(e) => setTotal(e.target.value)}
-              className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-[#282828] border border-[#404040] text-white placeholder:text-[#6a6a6a] focus:outline-none focus:ring-2 focus:ring-[#1db954] focus:border-transparent"
+              className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-white border border-[#f0e6dc] text-[#2d3748] placeholder:text-[#cbd5e0] focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
           </label>
           {mode === "normal" ? (
             <label className="block">
-              <span className="text-sm font-medium text-[#b3b3b3]">成果数 (xxx)</span>
+              <span className="text-sm font-medium text-[#4a5568]">成果数</span>
               <div className="flex gap-3 mt-2">
                 <input
                   type="number"
@@ -387,7 +362,7 @@ export default function Home() {
                   placeholder="0"
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
-                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-[#282828] border border-[#404040] text-white placeholder:text-[#6a6a6a] focus:outline-none focus:ring-2 focus:ring-[#1db954] focus:border-transparent"
+                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-white border border-[#f0e6dc] text-[#2d3748] placeholder:text-[#cbd5e0] focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
                 />
                 {showSlider && (
                   <input
@@ -397,14 +372,14 @@ export default function Home() {
                     step={sliderMax > 1000 ? sliderMax / 100 : 1}
                     value={Math.min(sliderValue, sliderMax)}
                     onChange={(e) => setTarget(e.target.value)}
-                    className="w-24 self-center accent-[#1db954]"
+                    className="w-24 self-center accent-[#ff6b6b]"
                   />
                 )}
               </div>
             </label>
           ) : (
             <label className="block">
-              <span className="text-sm font-medium text-[#b3b3b3]">目標%</span>
+              <span className="text-sm font-medium text-[#4a5568]">目標%</span>
               <div className="flex gap-3 mt-2">
                 <input
                   type="number"
@@ -412,7 +387,7 @@ export default function Home() {
                   placeholder="0"
                   value={percentInput}
                   onChange={(e) => setPercentInput(e.target.value)}
-                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-[#282828] border border-[#404040] text-white placeholder:text-[#6a6a6a] focus:outline-none focus:ring-2 focus:ring-[#1db954] focus:border-transparent"
+                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-white border border-[#f0e6dc] text-[#2d3748] placeholder:text-[#cbd5e0] focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
                 />
                 <input
                   type="range"
@@ -421,7 +396,7 @@ export default function Home() {
                   step={0.5}
                   value={Math.min(percentInputNum, 100)}
                   onChange={(e) => setPercentInput(e.target.value)}
-                  className="w-24 self-center accent-[#1db954]"
+                  className="w-24 self-center accent-[#ff6b6b]"
                 />
               </div>
             </label>
@@ -435,7 +410,7 @@ export default function Home() {
               <button
                 key={p}
                 onClick={() => applyPreset(p)}
-                className="flex-1 py-2.5 rounded-xl font-semibold bg-[#282828] text-[#b3b3b3] hover:bg-[#404040] hover:text-[#1db954] transition-colors"
+                className="flex-1 py-2.5 rounded-xl font-semibold bg-white text-[#718096] border border-[#f0e6dc] hover:border-[#ff6b6b] hover:text-[#ff6b6b] hover:bg-[#fff5f5] transition-colors shadow-sm"
               >
                 {p}%
               </button>
@@ -443,43 +418,33 @@ export default function Home() {
           </div>
         )}
 
-        {/* Result display - アニメーション + マイルストーン */}
-        <div
-          className={`flex flex-col items-center justify-center py-8 relative transition-transform duration-300 ${
-            milestone ? "scale-110" : "scale-100"
-          }`}
-        >
-          {milestone && (
-            <div
-              className={`absolute inset-0 rounded-full animate-ping opacity-20 ${
-                milestone === 50 ? "bg-[#eab308]" : "bg-[#1db954]"
-              }`}
-              style={{ animationDuration: "0.8s" }}
-            />
-          )}
+        {/* Result display */}
+        <div className="flex flex-col items-center justify-center py-8 relative">
           {mode === "normal" ? (
             <>
               <div
-                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 ${percent !== null ? percentTextColor : "text-[#6a6a6a]"}`}
+                key={displayValue}
+                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? "text-[#ff6b6b]" : "text-[#cbd5e0]"}`}
               >
                 {percent !== null ? animatedPercent : "—"}
               </div>
               {percent !== null && totalNum > 0 && (
-                <p className="text-[#b3b3b3] mt-2 text-sm relative z-10">
+                <p className="text-[#718096] mt-2 text-sm relative z-10">
                   {targetNum} / {totalNum}
                 </p>
               )}
             </>
           ) : (
             <>
-              <p className="text-sm text-[#b3b3b3] mb-1 relative z-10">必要な成果数</p>
+              <p className="text-sm text-[#718096] mb-1 relative z-10">必要な成果数</p>
               <div
-                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 ${reverseTarget !== null ? percentTextColor : "text-[#6a6a6a]"}`}
+                key={displayValue}
+                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 result-pop ${reverseTarget !== null ? "text-[#ff6b6b]" : "text-[#cbd5e0]"}`}
               >
                 {reverseTarget !== null ? animatedTarget : "—"}
               </div>
               {reverseTarget !== null && totalNum > 0 && (
-                <p className="text-[#b3b3b3] mt-2 text-sm relative z-10">
+                <p className="text-[#718096] mt-2 text-sm relative z-10">
                   {totalNum} の {percentInputNum}%
                 </p>
               )}
@@ -489,13 +454,13 @@ export default function Home() {
 
         {/* Progress bar */}
         <div className="w-full">
-          <div className="h-3 w-full rounded-full bg-[#282828] overflow-hidden">
+          <div className="h-3 w-full rounded-full bg-[#f0e6dc] overflow-hidden shadow-inner">
             <div
-              className={`h-full rounded-full ${progressColor} transition-all duration-300 ease-out`}
+              className="h-full rounded-full bg-[#ff6b6b] transition-all duration-300 ease-out shadow-sm"
               style={{ width: `${progressValue}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-[#6a6a6a] mt-1">
+          <div className="flex justify-between text-xs text-[#a0aec0] mt-1">
             <span>0%</span>
             <span>100%</span>
           </div>
@@ -505,14 +470,14 @@ export default function Home() {
         <button
           onClick={() => handleCopy()}
           disabled={mode === "normal" ? percent === null : reverseTarget === null}
-          className="w-full h-14 flex items-center justify-center gap-2 rounded-xl font-semibold bg-[#1db954] text-black hover:bg-[#1ed760] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#1db954] transition-colors"
+          className="w-full h-14 flex items-center justify-center gap-2 rounded-xl font-semibold bg-[#ff6b6b] text-white hover:bg-[#ff8c8c] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#ff6b6b] transition-all shadow-md shadow-[#ff6b6b]/30"
         >
           {copied ? (
             <>コピーしました</>
           ) : (
             <>
               <Copy size={20} />
-              文章をコピー
+              計算結果をコピー
             </>
           )}
         </button>
@@ -522,7 +487,7 @@ export default function Home() {
           totalNum > 0 && (
             <button
               onClick={addToHistory}
-              className="w-full h-12 flex items-center justify-center rounded-xl font-medium border border-[#404040] text-[#b3b3b3] hover:bg-[#282828] hover:text-white transition-colors"
+              className="w-full h-12 flex items-center justify-center rounded-xl font-medium border-2 border-dashed border-[#ff6b6b]/40 text-[#ff6b6b] hover:bg-[#fff5f5] hover:border-[#ff6b6b] transition-colors"
             >
               履歴に追加
             </button>
@@ -530,29 +495,29 @@ export default function Home() {
 
         {/* History list - 共有ボタン付き */}
         {history.length > 0 && (
-          <section className="pt-6 border-t border-[#282828]">
-            <h2 className="text-sm font-semibold text-[#b3b3b3] mb-4">履歴</h2>
+          <section className="pt-6 border-t border-[#f0e6dc]">
+            <h2 className="text-sm font-semibold text-[#4a5568] mb-4">履歴</h2>
             <ul className="space-y-2">
               {history.map((item) => (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between gap-3 py-3 px-4 rounded-xl bg-[#181818] border border-[#282828]"
+                  className="flex items-center justify-between gap-3 py-3 px-4 rounded-xl bg-white border border-[#f0e6dc] shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <span className="text-sm text-[#b3b3b3] truncate flex-1 min-w-0">
+                  <span className="text-sm text-[#4a5568] truncate flex-1 min-w-0">
                     {item.target} / {item.total} ={" "}
-                    <span className="text-[#1db954] font-semibold">{item.percent}%</span>
+                    <span className="text-[#ff6b6b] font-semibold">{item.percent}%</span>
                   </span>
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => shareHistoryItem(item)}
-                      className="p-2 rounded-lg text-[#6a6a6a] hover:text-[#1db954] hover:bg-[#282828] transition-colors"
+                      className="p-2 rounded-lg text-[#a0aec0] hover:text-[#ff6b6b] hover:bg-[#fff5f5] transition-colors"
                       aria-label="共有"
                     >
                       <Share2 size={18} />
                     </button>
                     <button
                       onClick={() => removeFromHistory(item.id)}
-                      className="p-2 rounded-lg text-[#6a6a6a] hover:text-red-400 hover:bg-[#282828] transition-colors"
+                      className="p-2 rounded-lg text-[#a0aec0] hover:text-[#ff6b6b] hover:bg-[#fff5f5] transition-colors"
                       aria-label="削除"
                     >
                       <Trash2 size={18} />
