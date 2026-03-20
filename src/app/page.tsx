@@ -480,7 +480,7 @@ export default function Home() {
 
       {premiumMounted && !isPremium && (
         <div className="shrink-0 px-3 sm:px-4 py-2 isolate">
-          <AdBanner format="horizontal" className="max-w-md mx-auto" />
+          <AdBanner format="auto" className="max-w-md mx-auto" />
         </div>
       )}
 
@@ -934,7 +934,7 @@ export default function Home() {
 
       {premiumMounted && !isPremium && (
         <div className="shrink-0 px-3 sm:px-4 py-3 border-t border-page isolate">
-          <AdBanner format="horizontal" className="max-w-md mx-auto" />
+          <AdBanner format="auto" className="max-w-md mx-auto" />
         </div>
       )}
 
