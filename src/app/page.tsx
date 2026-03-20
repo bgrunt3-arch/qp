@@ -6,6 +6,7 @@ import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown } from "luci
 
 const STORAGE_KEY = "percent-quick-history";
 const COMPARE_STORAGE_KEY = "percent-quick-compare";
+const DISCOUNT_STORAGE_KEY = "percent-quick-discount-history";
 const APP_NAME = "QuickPercent";
 
 type AppMode = "percent" | "compare" | "discount";
@@ -27,6 +28,15 @@ type CompareItem = {
   actualPrice: number;
   savingAmount: number;
   discountRate: number;
+  createdAt: number;
+};
+
+type DiscountHistoryItem = {
+  id: string;
+  originalPrice: number;
+  discountRate: number;
+  discountAmount: number;
+  priceAfterDiscount: number;
   createdAt: number;
 };
 
@@ -98,6 +108,25 @@ function loadCompareList(): CompareItem[] {
   }
 }
 
+function loadDiscountHistory(): DiscountHistoryItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(DISCOUNT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as DiscountHistoryItem[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDiscountHistory(items: DiscountHistoryItem[]): void {
+  if (typeof window === "undefined") return;
+  scheduleStorageWrite(() => {
+    localStorage.setItem(DISCOUNT_STORAGE_KEY, JSON.stringify(items));
+  });
+}
+
 function saveCompareList(items: CompareItem[]): void {
   if (typeof window === "undefined") return;
   scheduleStorageWrite(() => {
@@ -153,6 +182,7 @@ export default function Home() {
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [secondBagUnitPrice, setSecondBagUnitPrice] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [discountHistory, setDiscountHistory] = useState<DiscountHistoryItem[]>([]);
   const [compareList, setCompareList] = useState<CompareItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
@@ -221,12 +251,17 @@ export default function Home() {
 
   useEffect(() => {
     setHistory(loadHistory());
+    setDiscountHistory(loadDiscountHistory());
     setCompareList(loadCompareList());
   }, []);
 
   useEffect(() => {
     saveHistory(history);
   }, [history]);
+
+  useEffect(() => {
+    saveDiscountHistory(discountHistory);
+  }, [discountHistory]);
 
   useEffect(() => {
     saveCompareList(compareList);
@@ -316,6 +351,37 @@ export default function Home() {
 
   const removeFromHistory = (id: string) => {
     setHistory((prev) => prev.filter((h) => h.id !== id));
+  };
+
+  const addToDiscountHistory = useCallback(() => {
+    if (originalPriceNum <= 0 || (discountRateNum <= 0 && salePriceNum <= 0)) return;
+    const item: DiscountHistoryItem = {
+      id: crypto.randomUUID(),
+      originalPrice: originalPriceNum,
+      discountRate: discountRateNum,
+      discountAmount,
+      priceAfterDiscount,
+      createdAt: Date.now(),
+    };
+    setDiscountHistory((prev) => [item, ...prev].slice(0, 50));
+  }, [originalPriceNum, discountRateNum, salePriceNum, discountAmount, priceAfterDiscount]);
+
+  const removeFromDiscountHistory = (id: string) => {
+    setDiscountHistory((prev) => prev.filter((h) => h.id !== id));
+  };
+
+  const shareDiscountHistoryItem = async (item: DiscountHistoryItem) => {
+    const text =
+      item.discountAmount >= 0
+        ? `割引後 ${formatYen(item.priceAfterDiscount)}（${formatYen(item.discountAmount)} お得、${item.discountRate}%OFF）`
+        : `割引後 ${formatYen(item.priceAfterDiscount)}（${formatYen(-item.discountAmount)} 高く）`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setToastVisible(true);
+      setTimeout(() => setToastVisible(false), 2500);
+    } catch {
+      // ignore
+    }
   };
 
   const shareHistoryItem = async (item: HistoryItem) => {
@@ -604,6 +670,55 @@ export default function Home() {
           <Copy size={18} className="sm:w-5 sm:h-5" />
           結果をコピー
         </button>
+
+        {originalPriceNum > 0 && (discountRateNum > 0 || salePriceNum > 0) && (
+          <button
+            onClick={addToDiscountHistory}
+            className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
+          >
+            履歴に追加
+          </button>
+        )}
+
+        {discountHistory.length > 0 && (
+          <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
+            <h2 className="text-xs sm:text-sm font-semibold text-label mb-2 sm:mb-4 shrink-0">履歴</h2>
+            <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
+              {discountHistory.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
+                >
+                  <span className="text-xs sm:text-sm text-label truncate flex-1 min-w-0">
+                    {formatYen(item.originalPrice)} → {formatYen(item.priceAfterDiscount)}（
+                    {item.discountAmount >= 0 ? (
+                      <span className="text-[#22c55e] font-semibold">{item.discountRate}%OFF</span>
+                    ) : (
+                      <span className="text-accent font-semibold">+{formatYen(-item.discountAmount)}</span>
+                    )}
+                    ）
+                  </span>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => shareDiscountHistoryItem(item)}
+                      className="p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                      aria-label="共有"
+                    >
+                      <Share2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    </button>
+                    <button
+                      onClick={() => removeFromDiscountHistory(item.id)}
+                      className="p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                      aria-label="削除"
+                    >
+                      <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
           </>
         ) : (
           /* セット割モード */
