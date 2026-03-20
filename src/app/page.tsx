@@ -5,7 +5,6 @@ import { useTheme } from "next-themes";
 import { Copy, Trash2, ArrowRightLeft, Share2, Sun, Moon } from "lucide-react";
 
 const STORAGE_KEY = "percent-quick-history";
-const LAST_VALUES_KEY = "percent-quick-last";
 const APP_NAME = "QuickPercent";
 
 type HistoryItem = {
@@ -19,12 +18,6 @@ type HistoryItem = {
 type Mode = "normal" | "reverse";
 
 const QUICK_PRESETS = [25, 50, 75, 100] as const;
-
-const TEMPLATES = [
-  { id: "goal", label: "目標達成率", total: 100, target: 50 },
-  { id: "progress", label: "進捗率", total: 10, target: 7 },
-  { id: "sales", label: "売上達成率", total: 1000000, target: 750000 },
-] as const;
 
 function calcPercent(total: number, target: number): number | null {
   if (total <= 0 || !Number.isFinite(total) || !Number.isFinite(target)) return null;
@@ -74,34 +67,6 @@ function saveHistory(items: HistoryItem[]): void {
   if (typeof window === "undefined") return;
   scheduleStorageWrite(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  });
-}
-
-type LastValues = { mode: Mode; total: string; target: string; percentInput: string };
-
-function loadLastValues(): Partial<LastValues> | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(LAST_VALUES_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return null;
-    const p = parsed as Record<string, unknown>;
-    return {
-      mode: p.mode === "normal" || p.mode === "reverse" ? p.mode : undefined,
-      total: typeof p.total === "string" ? p.total : undefined,
-      target: typeof p.target === "string" ? p.target : undefined,
-      percentInput: typeof p.percentInput === "string" ? p.percentInput : undefined,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function saveLastValues(values: LastValues): void {
-  if (typeof window === "undefined") return;
-  scheduleStorageWrite(() => {
-    localStorage.setItem(LAST_VALUES_KEY, JSON.stringify(values));
   });
 }
 
@@ -184,22 +149,11 @@ export default function Home() {
 
   useEffect(() => {
     setHistory(loadHistory());
-    const last = loadLastValues();
-    if (last) {
-      if (last.mode) setMode(last.mode);
-      if (last.total !== undefined) setTotal(last.total);
-      if (last.target !== undefined) setTarget(last.target);
-      if (last.percentInput !== undefined) setPercentInput(last.percentInput);
-    }
   }, []);
 
   useEffect(() => {
     saveHistory(history);
   }, [history]);
-
-  useEffect(() => {
-    saveLastValues({ mode, total, target, percentInput });
-  }, [mode, total, target, percentInput]);
 
   const handleCopy = useCallback(async () => {
     if (mode === "normal") {
@@ -270,12 +224,6 @@ export default function Home() {
     }
   };
 
-  const applyTemplate = (t: (typeof TEMPLATES)[number]) => {
-    setTotal(String(t.total));
-    setTarget(String(t.target));
-    setMode("normal");
-  };
-
   const progressValue =
     mode === "normal"
       ? percent !== null
@@ -284,35 +232,35 @@ export default function Home() {
       : Math.min(100, Math.max(0, percentInputNum));
 
   return (
-    <div className="min-h-screen bg-page text-page flex flex-col">
+    <div className="min-h-dvh sm:min-h-screen h-dvh sm:h-auto bg-page text-page flex flex-col overflow-hidden sm:overflow-visible">
       {/* Toast */}
       {toastVisible && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl bg-toast text-white font-semibold shadow-lg shadow-[#ff6b6b]/30 toast-enter">
+        <div className="fixed bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 sm:px-6 sm:py-3 rounded-xl bg-toast text-white font-semibold text-sm sm:text-base shadow-lg shadow-[#ff6b6b]/30 toast-enter">
           コピーしました
         </div>
       )}
 
-      <header className="py-6 px-4 text-center border-b border-page bg-card/80 backdrop-blur-sm relative">
+      <header className="shrink-0 py-2 sm:py-4 px-3 sm:px-4 text-center border-b border-page bg-card/80 backdrop-blur-sm relative">
         {mounted && (
           <button
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
             aria-label={resolvedTheme === "dark" ? "ライトモードに切り替え" : "ダークモードに切り替え"}
           >
-            {resolvedTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+            {resolvedTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         )}
-        <h1 className="text-2xl font-bold tracking-tight text-accent">{APP_NAME}</h1>
-        <p className="text-sm text-muted mt-1">全体と成果を入力して割合を即座に算出</p>
-        <p className="text-xs text-muted mt-2 opacity-80">Esc: クリア</p>
+        <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-accent">{APP_NAME}</h1>
+        <p className="text-xs sm:text-sm text-muted mt-0.5 sm:mt-1 hidden sm:block">全体と成果を入力して割合を即座に算出</p>
+        <p className="text-[10px] sm:text-xs text-muted mt-1 sm:mt-2 opacity-80">Esc: クリア</p>
       </header>
 
-      <main className="flex-1 max-w-md mx-auto w-full px-4 py-8 flex flex-col gap-8">
+      <main className="flex-1 min-h-0 max-w-md mx-auto w-full px-3 sm:px-4 py-3 sm:py-6 flex flex-col gap-3 sm:gap-6 overflow-hidden sm:overflow-visible">
         {/* Mode toggle */}
-        <div className="flex rounded-2xl bg-card p-1.5 shadow-sm border border-page">
+        <div className="shrink-0 flex rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
           <button
             onClick={() => setMode("normal")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 ${
               mode === "normal" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
             }`}
           >
@@ -320,35 +268,19 @@ export default function Home() {
           </button>
           <button
             onClick={() => setMode("reverse")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 ${
               mode === "reverse" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
             }`}
           >
-            <ArrowRightLeft size={18} />
+            <ArrowRightLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
             逆算
           </button>
         </div>
 
-        {/* 用途別テンプレート */}
-        <div>
-          <span className="text-xs text-muted block mb-2">用途別テンプレート</span>
-          <div className="flex flex-wrap gap-2">
-            {TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => applyTemplate(t)}
-                className="px-3 py-1.5 rounded-xl text-sm font-medium bg-card text-muted border border-page hover:border-accent hover:text-accent hover:bg-subtle transition-colors shadow-sm"
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Input fields */}
-        <div className="space-y-4">
+        <div className="shrink-0 space-y-2 sm:space-y-4">
           <label className="block">
-            <span className="text-sm font-medium text-label">全体数</span>
+            <span className="text-xs sm:text-sm font-medium text-label">全体数</span>
             <input
               type="number"
               inputMode="decimal"
@@ -356,12 +288,12 @@ export default function Home() {
               value={total}
               onChange={(e) => setTotal(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
           </label>
           {mode === "normal" ? (
             <label className="block">
-              <span className="text-sm font-medium text-label">成果数</span>
+              <span className="text-xs sm:text-sm font-medium text-label">成果数</span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -369,12 +301,12 @@ export default function Home() {
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
               />
             </label>
           ) : (
             <label className="block">
-              <span className="text-sm font-medium text-label">目標%</span>
+              <span className="text-xs sm:text-sm font-medium text-label">目標%</span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -382,7 +314,7 @@ export default function Home() {
                 value={percentInput}
                 onChange={(e) => setPercentInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
               />
             </label>
           )}
@@ -390,12 +322,12 @@ export default function Home() {
 
         {/* クイックプリセット */}
         {totalNum > 0 && (
-          <div className="flex gap-2">
+          <div className="shrink-0 flex gap-1.5 sm:gap-2">
             {QUICK_PRESETS.map((p) => (
               <button
                 key={p}
                 onClick={() => applyPreset(p)}
-                className="flex-1 py-2.5 rounded-xl font-semibold bg-card text-muted border border-page hover:border-accent hover:text-accent hover:bg-subtle transition-colors shadow-sm"
+                className="flex-1 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-card text-muted border border-page hover:border-accent hover:text-accent hover:bg-subtle transition-colors shadow-sm"
               >
                 {p}%
               </button>
@@ -404,12 +336,12 @@ export default function Home() {
         )}
 
         {/* Result display */}
-        <div className="flex flex-col items-center justify-center py-8 relative">
+        <div className="shrink-0 flex flex-col items-center justify-center py-3 sm:py-6 relative">
           {mode === "normal" ? (
             <>
               <div
                 key={displayValue}
-                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? "text-accent" : "text-result-empty"}`}
+                className={`text-5xl sm:text-6xl md:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? "text-accent" : "text-result-empty"}`}
               >
                 {percent !== null ? animatedPercent : "—"}
               </div>
@@ -424,7 +356,7 @@ export default function Home() {
               <p className="text-sm text-muted mb-1 relative z-10">必要な成果数</p>
               <div
                 key={displayValue}
-                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 result-pop ${reverseTarget !== null ? "text-accent" : "text-result-empty"}`}
+                className={`text-5xl sm:text-6xl md:text-7xl font-bold tabular-nums relative z-10 result-pop ${reverseTarget !== null ? "text-accent" : "text-result-empty"}`}
               >
                 {reverseTarget !== null ? animatedTarget : "—"}
               </div>
@@ -438,8 +370,8 @@ export default function Home() {
         </div>
 
         {/* Progress bar */}
-        <div className="w-full">
-          <div className="h-3 w-full rounded-full bg-progress-track overflow-hidden shadow-inner">
+        <div className="shrink-0 w-full">
+          <div className="h-2 sm:h-3 w-full rounded-full bg-progress-track overflow-hidden shadow-inner">
             <div
               className="h-full rounded-full bg-accent transition-all duration-300 ease-out shadow-sm"
               style={{ width: `${progressValue}%` }}
@@ -455,13 +387,13 @@ export default function Home() {
         <button
           onClick={() => handleCopy()}
           disabled={mode === "normal" ? percent === null : reverseTarget === null}
-          className="w-full h-14 flex items-center justify-center gap-2 rounded-xl font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40 transition-all shadow-md shadow-[#ff6b6b]/30"
+          className="shrink-0 w-full h-11 sm:h-14 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40 transition-all shadow-md shadow-[#ff6b6b]/30"
         >
           {copied ? (
             <>コピーしました</>
           ) : (
             <>
-              <Copy size={20} />
+              <Copy size={18} className="sm:w-5 sm:h-5" />
               計算結果をコピー
             </>
           )}
@@ -472,7 +404,7 @@ export default function Home() {
           totalNum > 0 && (
             <button
               onClick={addToHistory}
-              className="w-full h-12 flex items-center justify-center rounded-xl font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
+              className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
             >
               履歴に追加
             </button>
@@ -480,32 +412,32 @@ export default function Home() {
 
         {/* History list - 共有ボタン付き */}
         {history.length > 0 && (
-          <section className="pt-6 border-t border-page">
-            <h2 className="text-sm font-semibold text-label mb-4">履歴</h2>
-            <ul className="space-y-2">
+          <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
+            <h2 className="text-xs sm:text-sm font-semibold text-label mb-2 sm:mb-4 shrink-0">履歴</h2>
+            <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
               {history.map((item) => (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between gap-3 py-3 px-4 rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow"
+                  className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
                 >
-                  <span className="text-sm text-label truncate flex-1 min-w-0">
+                  <span className="text-xs sm:text-sm text-label truncate flex-1 min-w-0">
                     {item.target} / {item.total} ={" "}
                     <span className="text-accent font-semibold">{item.percent}%</span>
                   </span>
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => shareHistoryItem(item)}
-                      className="p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                      className="p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
                       aria-label="共有"
                     >
-                      <Share2 size={18} />
+                      <Share2 size={16} className="sm:w-[18px] sm:h-[18px]" />
                     </button>
                     <button
                       onClick={() => removeFromHistory(item.id)}
-                      className="p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                      className="p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
                       aria-label="削除"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
                     </button>
                   </div>
                 </li>
