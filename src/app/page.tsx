@@ -193,13 +193,31 @@ export default function Home() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("コピーしました");
   const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
   const { isPremium, setPremium, mounted: premiumMounted } = usePremium();
   const [mounted, setMounted] = useState(false);
 
   const premiumPurchaseUrl = process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL;
+  const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const useStripeCheckout = Boolean(stripePublishableKey);
 
   useEffect(() => setMounted(true), []);
+
+  // Stripe決済成功時のコールバック
+  useEffect(() => {
+    if (typeof window === "undefined" || !premiumMounted) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success") {
+      setPremium(true);
+      setPremiumModalOpen(false);
+      setToastMessage("Premiumを購入しました");
+      setToastVisible(true);
+      setTimeout(() => setToastVisible(false), 2500);
+      setTimeout(() => setToastMessage("コピーしました"), 2500);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [premiumMounted, setPremium]);
 
   const unitPriceNum = parseFloat(unitPrice) || 0;
   const secondBagUnitPriceNum = parseFloat(secondBagUnitPrice) || 0;
@@ -409,6 +427,22 @@ export default function Home() {
 
   const progressValue = percent !== null ? Math.min(100, Math.max(0, percent)) : 0;
 
+  const handleStripeCheckout = async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch("/api/checkout", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Checkout failed");
+      if (data.url) window.location.href = data.url;
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : "エラーが発生しました");
+      setToastVisible(true);
+      setTimeout(() => setToastVisible(false), 3000);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-dvh sm:min-h-screen h-dvh sm:h-auto bg-page text-foreground flex flex-col overflow-hidden sm:overflow-visible">
       {/* Toast */}
@@ -569,7 +603,7 @@ export default function Home() {
               onClick={addToHistory}
               className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
             >
-              履歴に追加
+              履歴に追加（式を表示）
             </button>
           )}
 
@@ -708,7 +742,7 @@ export default function Home() {
             onClick={addToDiscountHistory}
             className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
           >
-            履歴に追加
+            履歴に追加（式を表示）
           </button>
         )}
 
@@ -851,7 +885,7 @@ export default function Home() {
             onClick={addToCompareList}
             className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
           >
-            リストに追加
+            リストに追加（式を表示）
           </button>
         )}
 
@@ -926,9 +960,17 @@ export default function Home() {
             <p className="text-sm text-muted mb-4">
               広告を非表示にして、快適にご利用いただけます。買い切りで永続的に有効です。
             </p>
-            <p className="text-2xl font-bold text-accent mb-6">300円</p>
+            <p className="text-2xl font-bold text-accent mb-6">100円</p>
             {isPremium ? (
               <p className="text-sm text-[#22c55e] font-medium">ご購入済みです</p>
+            ) : useStripeCheckout ? (
+              <button
+                onClick={handleStripeCheckout}
+                disabled={checkoutLoading}
+                className="w-full py-3 rounded-xl font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {checkoutLoading ? "処理中..." : "プレミアムプランを試す"}
+              </button>
             ) : premiumPurchaseUrl ? (
               <a
                 href={premiumPurchaseUrl}
