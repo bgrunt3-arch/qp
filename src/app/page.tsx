@@ -31,6 +31,12 @@ type CompareItem = {
 
 const QUICK_PRESETS = [25, 50, 75, 100] as const;
 
+/** iOSのtype="number"の二重表示バグを避けるため、数値のみ許可する */
+function sanitizeNumericInput(value: string): string {
+  const filtered = value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+  return filtered;
+}
+
 function formatYen(n: number): string {
   return `${Math.round(n).toLocaleString("ja-JP")}円`;
 }
@@ -143,7 +149,7 @@ export default function Home() {
   const [target, setTarget] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
-  const [discountRate, setDiscountRate] = useState<string>("");
+  const [secondBagUnitPrice, setSecondBagUnitPrice] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [compareList, setCompareList] = useState<CompareItem[]>([]);
   const [copied, setCopied] = useState(false);
@@ -155,10 +161,21 @@ export default function Home() {
 
   const unitPriceNum = parseFloat(unitPrice) || 0;
   const quantityNum = parseFloat(quantity) || 0;
-  const discountRateNum = Math.min(100, Math.max(0, parseFloat(discountRate) || 0));
+  const secondBagUnitPriceNum = parseFloat(secondBagUnitPrice) || 0;
   const actualPriceNum =
     unitPriceNum > 0 && quantityNum > 0
-      ? Math.round(unitPriceNum * quantityNum * (1 - discountRateNum / 100) * 100) / 100
+      ? (() => {
+          let sum = unitPriceNum; // 1袋目
+          if (quantityNum >= 2 && secondBagUnitPriceNum > 0) {
+            sum += secondBagUnitPriceNum; // 2袋目
+          } else if (quantityNum >= 2) {
+            sum += unitPriceNum; // 2袋目（2袋目単価未入力時は通常価格）
+          }
+          if (quantityNum >= 3) {
+            sum += unitPriceNum * (quantityNum - 2); // 3袋目以降は通常価格
+          }
+          return Math.round(sum * 100) / 100;
+        })()
       : 0;
   const discountResult = calcDiscount(unitPriceNum, quantityNum, actualPriceNum);
 
@@ -227,7 +244,7 @@ export default function Home() {
     setTarget("");
     setUnitPrice("");
     setQuantity("");
-    setDiscountRate("");
+    setSecondBagUnitPrice("");
   }, []);
 
   const addToCompareList = useCallback(() => {
@@ -336,11 +353,11 @@ export default function Home() {
           <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">全体数</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               placeholder="0"
               value={total}
-              onChange={(e) => setTotal(e.target.value)}
+              onChange={(e) => setTotal(sanitizeNumericInput(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
@@ -348,11 +365,11 @@ export default function Home() {
           <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">成果数</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               placeholder="0"
               value={target}
-              onChange={(e) => setTarget(e.target.value)}
+              onChange={(e) => setTarget(sanitizeNumericInput(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
@@ -472,11 +489,23 @@ export default function Home() {
           <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">通常時の単価（円）</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               placeholder="0"
               value={unitPrice}
-              onChange={(e) => setUnitPrice(e.target.value)}
+              onChange={(e) => setUnitPrice(sanitizeNumericInput(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">2袋目の単価（円）</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={secondBagUnitPrice}
+              onChange={(e) => setSecondBagUnitPrice(sanitizeNumericInput(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
@@ -484,25 +513,11 @@ export default function Home() {
           <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">購入個数</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               placeholder="0"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
-            />
-          </label>
-          <label className="block">
-            <span className="text-xs sm:text-sm font-medium text-label">割引率（%）</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              placeholder="0"
-              min={0}
-              max={100}
-              value={discountRate}
-              onChange={(e) => setDiscountRate(e.target.value)}
+              onChange={(e) => setQuantity(sanitizeNumericInput(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
@@ -519,23 +534,22 @@ export default function Home() {
                   {formatYen(unitPriceNum * quantityNum)}
                 </span>
               </li>
-              {discountResult && (
-                <>
-                  <li className="flex justify-between items-center gap-3 py-3 px-4">
-                    <span className="text-sm text-muted">実際の支払い合計</span>
-                    <span className="text-base sm:text-lg font-semibold text-foreground tabular-nums">
-                      {formatYen(discountResult.actualPrice)}
-                    </span>
-                  </li>
-                  <li className="flex justify-between items-center gap-3 py-3 px-4">
-                    <span className="text-sm text-muted">差額（割引率）</span>
-                    <span className={`text-base sm:text-lg font-bold tabular-nums ${discountResult.savingAmount > 0 ? "text-[#22c55e]" : discountResult.savingAmount < 0 ? "text-accent" : "text-foreground"}`}>
-                      {discountResult.savingAmount > 0 ? `-${formatYen(discountResult.savingAmount)}` : discountResult.savingAmount < 0 ? `+${formatYen(-discountResult.savingAmount)}` : formatYen(0)}
-                      （{discountResult.discountRate.toFixed(1)}%）
-                    </span>
-                  </li>
-                </>
-              )}
+              <li className="flex justify-between items-center gap-3 py-3 px-4">
+                <span className="text-sm text-muted">実際の支払い合計</span>
+                <span className="text-base sm:text-lg font-semibold text-foreground tabular-nums">
+                  {formatYen(actualPriceNum)}
+                </span>
+              </li>
+              <li className="flex justify-between items-center gap-3 py-3 px-4">
+                <span className="text-sm text-muted">差額（割引率）</span>
+                <span className={`text-base sm:text-lg font-bold tabular-nums ${(discountResult?.savingAmount ?? 0) > 0 ? "text-[#22c55e]" : (discountResult?.savingAmount ?? 0) < 0 ? "text-accent" : "text-foreground"}`}>
+                  {(() => {
+                    const s = discountResult?.savingAmount ?? 0;
+                    return s > 0 ? `-${formatYen(s)}` : s < 0 ? `+${formatYen(-s)}` : formatYen(0);
+                  })()}
+                  （{(discountResult?.discountRate ?? 0).toFixed(1)}%）
+                </span>
+              </li>
             </ul>
           ) : (
             <div className="py-8 text-center">
