@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Copy, Trash2, ArrowRightLeft, Share2, Sun, Moon } from "lucide-react";
+import { Copy, Trash2, ArrowRightLeft, Share2, Sun, Moon, Percent } from "lucide-react";
 
 const STORAGE_KEY = "percent-quick-history";
+const COMPARE_STORAGE_KEY = "percent-quick-compare";
 const APP_NAME = "QuickPercent";
+
+type AppMode = "percent" | "compare";
 
 type HistoryItem = {
   id: string;
@@ -17,7 +20,21 @@ type HistoryItem = {
 
 type Mode = "normal" | "reverse";
 
+type CompareItem = {
+  id: string;
+  unitPrice: number;
+  quantity: number;
+  actualPrice: number;
+  savingAmount: number;
+  discountRate: number;
+  createdAt: number;
+};
+
 const QUICK_PRESETS = [25, 50, 75, 100] as const;
+
+function formatYen(n: number): string {
+  return `${Math.round(n).toLocaleString("ja-JP")}円`;
+}
 
 function calcPercent(total: number, target: number): number | null {
   if (total <= 0 || !Number.isFinite(total) || !Number.isFinite(target)) return null;
@@ -70,6 +87,33 @@ function saveHistory(items: HistoryItem[]): void {
   });
 }
 
+function loadCompareList(): CompareItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(COMPARE_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CompareItem[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCompareList(items: CompareItem[]): void {
+  if (typeof window === "undefined") return;
+  scheduleStorageWrite(() => {
+    localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(items));
+  });
+}
+
+function calcDiscount(unitPrice: number, quantity: number, actualPrice: number) {
+  const totalNormalPrice = unitPrice * quantity;
+  if (totalNormalPrice <= 0 || !Number.isFinite(totalNormalPrice)) return null;
+  const savingAmount = totalNormalPrice - actualPrice;
+  const discountRate = totalNormalPrice > 0 ? (savingAmount / totalNormalPrice) * 100 : 0;
+  return { totalNormalPrice, savingAmount, discountRate };
+}
+
 function useAnimatedValue(target: number, isPercent: boolean, duration = 300) {
   const [display, setDisplay] = useState(target);
   const prevRef = useRef(target);
@@ -100,17 +144,27 @@ function useAnimatedValue(target: number, isPercent: boolean, duration = 300) {
 }
 
 export default function Home() {
+  const [appMode, setAppMode] = useState<AppMode>("percent");
   const [mode, setMode] = useState<Mode>("normal");
   const [total, setTotal] = useState<string>("");
   const [target, setTarget] = useState<string>("");
   const [percentInput, setPercentInput] = useState<string>("");
+  const [unitPrice, setUnitPrice] = useState<string>("");
+  const [quantity, setQuantity] = useState<string>("");
+  const [actualPrice, setActualPrice] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [compareList, setCompareList] = useState<CompareItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  const unitPriceNum = parseFloat(unitPrice) || 0;
+  const quantityNum = parseFloat(quantity) || 0;
+  const actualPriceNum = parseFloat(actualPrice) || 0;
+  const discountResult = calcDiscount(unitPriceNum, quantityNum, actualPriceNum);
 
   const totalNum = parseFloat(total) || 0;
   const targetNum = parseFloat(target) || 0;
@@ -149,13 +203,32 @@ export default function Home() {
 
   useEffect(() => {
     setHistory(loadHistory());
+    setCompareList(loadCompareList());
   }, []);
 
   useEffect(() => {
     saveHistory(history);
   }, [history]);
 
+  useEffect(() => {
+    saveCompareList(compareList);
+  }, [compareList]);
+
   const handleCopy = useCallback(async () => {
+    if (appMode === "compare") {
+      if (!discountResult) return;
+      const text = `${formatYen(discountResult.savingAmount)} (${discountResult.discountRate.toFixed(1)}%) 安く購入できます`;
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setToastVisible(true);
+        setTimeout(() => setCopied(false), 1500);
+        setTimeout(() => setToastVisible(false), 2500);
+      } catch {
+        // fallback
+      }
+      return;
+    }
     if (mode === "normal") {
       if (percent === null) return;
       const text = `${percent}%`;
@@ -181,13 +254,34 @@ export default function Home() {
         // fallback
       }
     }
-  }, [mode, percent, reverseTarget]);
+  }, [appMode, mode, percent, reverseTarget, discountResult]);
 
   const handleClear = useCallback(() => {
     setTotal("");
     setTarget("");
     setPercentInput("");
+    setUnitPrice("");
+    setQuantity("");
+    setActualPrice("");
   }, []);
+
+  const addToCompareList = useCallback(() => {
+    if (!discountResult || quantityNum <= 0) return;
+    const item: CompareItem = {
+      id: crypto.randomUUID(),
+      unitPrice: unitPriceNum,
+      quantity: quantityNum,
+      actualPrice: actualPriceNum,
+      savingAmount: discountResult.savingAmount,
+      discountRate: discountResult.discountRate,
+      createdAt: Date.now(),
+    };
+    setCompareList((prev) => [item, ...prev].slice(0, 50));
+  }, [discountResult, quantityNum, unitPriceNum, actualPriceNum]);
+
+  const removeFromCompareList = (id: string) => {
+    setCompareList((prev) => prev.filter((c) => c.id !== id));
+  };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -256,7 +350,30 @@ export default function Home() {
       </header>
 
       <main className="flex-1 min-h-0 max-w-md mx-auto w-full px-3 sm:px-4 py-3 sm:py-6 flex flex-col gap-3 sm:gap-6 overflow-hidden sm:overflow-visible">
-        {/* Mode toggle */}
+        {/* App mode toggle: 通常 / 比較 */}
+        <div className="shrink-0 flex rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
+          <button
+            onClick={() => setAppMode("percent")}
+            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 ${
+              appMode === "percent" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
+            }`}
+          >
+            <Percent size={16} className="sm:w-[18px] sm:h-[18px]" />
+            割合
+          </button>
+          <button
+            onClick={() => setAppMode("compare")}
+            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 ${
+              appMode === "compare" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
+            }`}
+          >
+            比較
+          </button>
+        </div>
+
+        {appMode === "percent" ? (
+          <>
+        {/* Percent mode toggle */}
         <div className="shrink-0 flex rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
           <button
             onClick={() => setMode("normal")}
@@ -410,7 +527,7 @@ export default function Home() {
             </button>
           )}
 
-        {/* History list - 共有ボタン付き */}
+        {/* History list */}
         {history.length > 0 && (
           <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
             <h2 className="text-xs sm:text-sm font-semibold text-label mb-2 sm:mb-4 shrink-0">履歴</h2>
@@ -444,6 +561,128 @@ export default function Home() {
               ))}
             </ul>
           </section>
+        )}
+          </>
+        ) : (
+          /* 比較モード: セット割引 */
+          <>
+        <div className="shrink-0 space-y-2 sm:space-y-4">
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">通常時の単価（円）</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="0"
+              value={unitPrice}
+              onChange={(e) => setUnitPrice(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">購入個数</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="0"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">実際の支払い合計（円）</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="0"
+              value={actualPrice}
+              onChange={(e) => setActualPrice(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+        </div>
+
+        {/* 比較モード結果 */}
+        <div className="shrink-0 flex flex-col items-center justify-center py-3 sm:py-6 relative">
+          {discountResult && quantityNum > 0 ? (
+            discountResult.savingAmount > 0 ? (
+              <div key={discountResult.savingAmount} className="text-center result-pop">
+                <p className="text-sm sm:text-base text-muted mb-2">お得な金額</p>
+                <p className="text-2xl sm:text-3xl font-bold">
+                  <span className="text-[#22c55e] font-extrabold">{formatYen(discountResult.savingAmount)}</span>
+                  <span className="text-muted font-normal ml-2">({discountResult.discountRate.toFixed(1)}%)</span>
+                </p>
+                <p className="text-base sm:text-lg font-semibold text-[#22c55e] mt-2">
+                  安く購入できます！
+                </p>
+              </div>
+            ) : discountResult.savingAmount < 0 ? (
+              <div className="text-center">
+                <p className="text-muted text-sm">通常価格より高くなっています</p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-muted text-sm">割引なし</p>
+              </div>
+            )
+          ) : (
+            <p className="text-result-empty text-2xl">—</p>
+          )}
+        </div>
+
+        {/* 比較モード コピー・追加 */}
+        <button
+          onClick={() => handleCopy()}
+          disabled={!discountResult || quantityNum <= 0 || discountResult.savingAmount <= 0}
+          className="shrink-0 w-full h-11 sm:h-14 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-[#ff6b6b]/30"
+        >
+          <Copy size={18} className="sm:w-5 sm:h-5" />
+          結果をコピー
+        </button>
+
+        {discountResult && quantityNum > 0 && discountResult.savingAmount > 0 && (
+          <button
+            onClick={addToCompareList}
+            className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
+          >
+            リストに追加
+          </button>
+        )}
+
+        {/* 比較リスト（プレイリスト風） */}
+        {compareList.length > 0 && (
+          <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
+            <h2 className="text-xs sm:text-sm font-semibold text-label mb-2 sm:mb-4 shrink-0">比較リスト</h2>
+            <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
+              {compareList.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 sm:gap-3 py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs sm:text-sm text-label block truncate">
+                      {item.quantity}個 × {formatYen(item.unitPrice)} → {formatYen(item.actualPrice)}
+                    </span>
+                    <span className="text-sm sm:text-base font-bold text-[#22c55e]">
+                      {formatYen(item.savingAmount)} ({item.discountRate.toFixed(1)}%) お得
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => removeFromCompareList(item.id)}
+                    className="p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors shrink-0"
+                    aria-label="削除"
+                  >
+                    <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+          </>
         )}
       </main>
     </div>

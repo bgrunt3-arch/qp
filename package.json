@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "icon:png": "node scripts/svg-to-png.mjs"
+    "lint": "eslint"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",
