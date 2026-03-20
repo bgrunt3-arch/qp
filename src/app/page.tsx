@@ -938,6 +938,14 @@ export default function Home() {
         </div>
       )}
 
+      <footer className="shrink-0 px-3 sm:px-4 py-4 border-t border-page">
+        <div className="max-w-md mx-auto flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
+          <a href="/privacy" className="hover:text-accent">プライバシーポリシー</a>
+          <a href="/terms" className="hover:text-accent">利用規約</a>
+          <a href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL || "support@qp-lime.vercel.app"}`} className="hover:text-accent">お問い合わせ</a>
+        </div>
+      </footer>
+
       {premiumModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setPremiumModalOpen(false)}>
           <div

@@ -76,7 +76,7 @@ export default function RootLayout({
         <meta charSet="utf-8" />
         <link rel="icon" href="/icon.png" sizes="512x512" type="image/png" />
         <link rel="apple-touch-icon" href="/icon.png" sizes="512x512" />
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="/manifest.webmanifest" />
         {ADSENSE_CLIENT && (
           <Script
             id="adsense"
