@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://qp.vercel.app";
 
-const iconVersion = "2";
+const iconVersion = "3";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
