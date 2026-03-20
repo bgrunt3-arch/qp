@@ -373,8 +373,8 @@ export default function Home() {
   const shareDiscountHistoryItem = async (item: DiscountHistoryItem) => {
     const text =
       item.discountAmount >= 0
-        ? `${formatYen(item.originalPrice)} - ${formatYen(item.discountAmount)} = ${formatYen(item.priceAfterDiscount)}（${item.discountRate}%OFF）`
-        : `${formatYen(item.originalPrice)} + ${formatYen(-item.discountAmount)} = ${formatYen(item.priceAfterDiscount)}（+${formatYen(-item.discountAmount)}）`;
+        ? `(${formatYen(item.originalPrice)} - ${formatYen(item.priceAfterDiscount)}) / ${formatYen(item.originalPrice)} × 100 = ${item.discountRate}%、${formatYen(item.originalPrice)} - ${formatYen(item.priceAfterDiscount)} = ${formatYen(item.discountAmount)}`
+        : `${formatYen(item.priceAfterDiscount)} - ${formatYen(item.originalPrice)} = ${formatYen(-item.discountAmount)}（値上げ額）`;
     try {
       await navigator.clipboard.writeText(text);
       setToastVisible(true);
@@ -554,7 +554,7 @@ export default function Home() {
                   key={item.id}
                   className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
                 >
-                  <span className="text-xs sm:text-sm text-label truncate flex-1 min-w-0">
+                  <span className="text-xs sm:text-sm text-label flex-1 min-w-0 overflow-x-auto overflow-y-hidden block pr-1">
                     {item.isInverted ? (
                       <>
                         残り: ({item.total} - {item.target}) / {item.total} ={" "}
@@ -689,16 +689,16 @@ export default function Home() {
                   key={item.id}
                   className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
                 >
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden pr-1">
                     {item.discountAmount >= 0 ? (
                       <>
-                        <span className="text-xs sm:text-sm text-label block truncate">
+                        <span className="text-xs sm:text-sm text-label block whitespace-nowrap">
                           ({formatYen(item.originalPrice)} - {formatYen(item.priceAfterDiscount)}) /{" "}
                           {formatYen(item.originalPrice)} × 100 = {item.discountRate}%（割引率）
                         </span>
-                        <span className="text-xs sm:text-sm text-label block truncate">
-                          {formatYen(item.originalPrice)} - {formatYen(item.discountAmount)} ={" "}
-                          {formatYen(item.priceAfterDiscount)}（元-割引額）
+                        <span className="text-xs sm:text-sm text-label block whitespace-nowrap">
+                          {formatYen(item.originalPrice)} - {formatYen(item.priceAfterDiscount)} ={" "}
+                          {formatYen(item.discountAmount)}（割引額）
                         </span>
                         <span className="text-sm sm:text-base font-bold text-[#22c55e] block mt-0.5">
                           {formatYen(item.discountAmount)} ({item.discountRate}%OFF) お得
@@ -706,9 +706,9 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        <span className="text-xs sm:text-sm text-label block truncate">
-                          {formatYen(item.originalPrice)} + {formatYen(-item.discountAmount)} ={" "}
-                          {formatYen(item.priceAfterDiscount)}（元+値上げ）
+                        <span className="text-xs sm:text-sm text-label block whitespace-nowrap">
+                          {formatYen(item.priceAfterDiscount)} - {formatYen(item.originalPrice)} ={" "}
+                          {formatYen(-item.discountAmount)}（値上げ額）
                         </span>
                         <span className="text-sm sm:text-base font-bold text-accent block mt-0.5">
                           +{formatYen(-item.discountAmount)}
@@ -831,14 +831,18 @@ export default function Home() {
                   key={item.id}
                   className="flex items-center justify-between gap-2 sm:gap-3 py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
                 >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs sm:text-sm text-label block truncate">
+                  <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden pr-1">
+                    <span className="text-xs sm:text-sm text-label block whitespace-nowrap">
                       {formatYen(item.unitPrice)} + {formatYen(item.actualPrice - item.unitPrice)} ={" "}
                       {formatYen(item.actualPrice)}（1袋目+2袋目）
                     </span>
-                    <span className="text-xs sm:text-sm text-label block truncate">
-                      {formatYen(item.unitPrice * item.quantity)} - {formatYen(item.savingAmount)} ={" "}
-                      {formatYen(item.actualPrice)}（通常-差額）
+                    <span className="text-xs sm:text-sm text-label block whitespace-nowrap">
+                      {formatYen(item.unitPrice * item.quantity)} - {formatYen(item.actualPrice)} ={" "}
+                      {formatYen(item.savingAmount)}（差額）
+                    </span>
+                    <span className="text-xs sm:text-sm text-label block whitespace-nowrap">
+                      {formatYen(item.savingAmount)} / {formatYen(item.unitPrice * item.quantity)} × 100 ={" "}
+                      {item.discountRate.toFixed(1)}%（割引率）
                     </span>
                     <span className="text-sm sm:text-base font-bold text-[#22c55e] block mt-0.5">
                       {formatYen(item.savingAmount)} ({item.discountRate.toFixed(1)}%) お得
