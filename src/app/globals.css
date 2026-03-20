@@ -10,6 +10,7 @@
   --accent: #ff6b6b;
   --subtle: #ede8e0;
   --input: #faf8f5;
+  --input-foreground: #0f172a;
   --result-empty: #9ca3af;
   --label: #4b5563;
   --toast: #ff6b6b;
@@ -25,6 +26,7 @@
   --accent: #ff6b6b;
   --subtle: #27272a;
   --input: #1f1f1f;
+  --input-foreground: #f8fafc;
   --result-empty: #71717a;
   --label: #d4d4d8;
   --toast: #ff6b6b;
@@ -39,6 +41,7 @@
   --color-accent: var(--accent);
   --color-subtle: var(--subtle);
   --color-input: var(--input);
+  --color-input-foreground: var(--input-foreground);
   --color-result-empty: var(--result-empty);
   --color-label: var(--label);
   --color-toast: var(--toast);
