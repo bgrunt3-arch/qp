@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# QuickPercent
 
-## Getting Started
+全体と成果を入力して割合を即座に算出するWebアプリ。
 
-First, run the development server:
+## 機能
+
+- **通常モード**: 全体数・成果数 → 割合（%）を計算
+- **逆算モード**: 全体数・目標% → 必要な成果数を計算
+- 進捗バー色分け（0-30%赤 / 30-70%黄 / 70-100%緑）
+- クイックプリセット（25%, 50%, 75%, 100%）
+- 用途別テンプレート
+- 履歴保存（ローカルストレージ）
+- コピー・共有
+- キーボードショートカット（Enter: コピー / Esc: クリア）
+
+## 開発
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 で起動
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 本番ビルド
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## デプロイ（Vercel）
 
-To learn more about Next.js, take a look at the following resources:
+1. [Vercel](https://vercel.com) にリポジトリをインポート
+2. ルートディレクトリをプロジェクトフォルダに設定（モノレポの場合）
+3. デプロイ
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 環境変数（任意）
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 変数 | 説明 |
+|------|------|
+| `NEXT_PUBLIC_SITE_URL` | 本番URL（OGP・sitemap用）。例: `https://qp.vercel.app` |
 
-## Deploy on Vercel
+## 技術スタック
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS
+- Lucide React
