@@ -962,7 +962,24 @@ export default function Home() {
             </p>
             <p className="text-2xl font-bold text-accent mb-6">100円</p>
             {isPremium ? (
-              <p className="text-sm text-[#22c55e] font-medium">ご購入済みです</p>
+              <div className="space-y-3">
+                <p className="text-sm text-[#22c55e] font-medium">ご購入済みです</p>
+                <button
+                  onClick={() => {
+                    setPremium(false);
+                    setPremiumModalOpen(false);
+                    setToastMessage("Premiumをリセットしました");
+                    setToastVisible(true);
+                    setTimeout(() => {
+                      setToastVisible(false);
+                      setToastMessage("コピーしました");
+                    }, 2500);
+                  }}
+                  className="text-xs text-muted hover:text-foreground underline"
+                >
+                  購入をやり直す（リセット）
+                </button>
+              </div>
             ) : useStripeCheckout ? (
               <button
                 onClick={handleStripeCheckout}
