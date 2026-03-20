@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Copy, Trash2, ArrowRightLeft, Share2 } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Copy, Trash2, ArrowRightLeft, Share2, Sun, Moon } from "lucide-react";
 
 const STORAGE_KEY = "percent-quick-history";
 const LAST_VALUES_KEY = "percent-quick-last";
@@ -141,6 +142,10 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
+  const { setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const totalNum = parseFloat(total) || 0;
   const targetNum = parseFloat(target) || 0;
@@ -287,27 +292,36 @@ export default function Home() {
   const showSlider = mode === "normal" ? totalNum > 0 : true;
 
   return (
-    <div className="min-h-screen bg-[#fffbf5] text-[#2d3748] flex flex-col">
+    <div className="min-h-screen bg-page text-page flex flex-col">
       {/* Toast */}
       {toastVisible && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl bg-[#ff6b6b] text-white font-semibold shadow-lg shadow-[#ff6b6b]/30 toast-enter">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl bg-toast text-white font-semibold shadow-lg shadow-[#ff6b6b]/30 toast-enter">
           コピーしました
         </div>
       )}
 
-      <header className="py-6 px-4 text-center border-b border-[#f0e6dc] bg-white/80 backdrop-blur-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-[#ff6b6b]">{APP_NAME}</h1>
-        <p className="text-sm text-[#718096] mt-1">全体と成果を入力して割合を即座に算出</p>
-        <p className="text-xs text-[#a0aec0] mt-2">Enter: コピー / Esc: クリア</p>
+      <header className="py-6 px-4 text-center border-b border-page bg-card/80 backdrop-blur-sm relative">
+        {mounted && (
+          <button
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+            aria-label={resolvedTheme === "dark" ? "ライトモードに切り替え" : "ダークモードに切り替え"}
+          >
+            {resolvedTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        )}
+        <h1 className="text-2xl font-bold tracking-tight text-accent">{APP_NAME}</h1>
+        <p className="text-sm text-muted mt-1">全体と成果を入力して割合を即座に算出</p>
+        <p className="text-xs text-muted mt-2 opacity-80">Enter: コピー / Esc: クリア</p>
       </header>
 
       <main className="flex-1 max-w-md mx-auto w-full px-4 py-8 flex flex-col gap-8">
         {/* Mode toggle */}
-        <div className="flex rounded-2xl bg-white p-1.5 shadow-sm border border-[#f0e6dc]">
+        <div className="flex rounded-2xl bg-card p-1.5 shadow-sm border border-page">
           <button
             onClick={() => setMode("normal")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all duration-200 ${
-              mode === "normal" ? "bg-[#ff6b6b] text-white shadow-md shadow-[#ff6b6b]/30" : "text-[#718096] hover:text-[#ff6b6b] hover:bg-[#fff5f5]"
+              mode === "normal" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
             }`}
           >
             通常
@@ -315,7 +329,7 @@ export default function Home() {
           <button
             onClick={() => setMode("reverse")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all duration-200 ${
-              mode === "reverse" ? "bg-[#ff6b6b] text-white shadow-md shadow-[#ff6b6b]/30" : "text-[#718096] hover:text-[#ff6b6b] hover:bg-[#fff5f5]"
+              mode === "reverse" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
             }`}
           >
             <ArrowRightLeft size={18} />
@@ -325,13 +339,13 @@ export default function Home() {
 
         {/* 用途別テンプレート */}
         <div>
-          <span className="text-xs text-[#718096] block mb-2">用途別テンプレート</span>
+          <span className="text-xs text-muted block mb-2">用途別テンプレート</span>
           <div className="flex flex-wrap gap-2">
             {TEMPLATES.map((t) => (
               <button
                 key={t.id}
                 onClick={() => applyTemplate(t)}
-                className="px-3 py-1.5 rounded-xl text-sm font-medium bg-white text-[#718096] border border-[#f0e6dc] hover:border-[#ff6b6b] hover:text-[#ff6b6b] hover:bg-[#fff5f5] transition-colors shadow-sm"
+                className="px-3 py-1.5 rounded-xl text-sm font-medium bg-card text-muted border border-page hover:border-accent hover:text-accent hover:bg-subtle transition-colors shadow-sm"
               >
                 {t.label}
               </button>
@@ -342,19 +356,19 @@ export default function Home() {
         {/* Input fields */}
         <div className="space-y-4">
           <label className="block">
-            <span className="text-sm font-medium text-[#4a5568]">全体数</span>
+            <span className="text-sm font-medium text-label">全体数</span>
             <input
               type="number"
               inputMode="decimal"
               placeholder="0"
               value={total}
               onChange={(e) => setTotal(e.target.value)}
-              className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-white border border-[#f0e6dc] text-[#2d3748] placeholder:text-[#cbd5e0] focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+              className="mt-2 w-full h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
           </label>
           {mode === "normal" ? (
             <label className="block">
-              <span className="text-sm font-medium text-[#4a5568]">成果数</span>
+              <span className="text-sm font-medium text-label">成果数</span>
               <div className="flex gap-3 mt-2">
                 <input
                   type="number"
@@ -362,7 +376,7 @@ export default function Home() {
                   placeholder="0"
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
-                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-white border border-[#f0e6dc] text-[#2d3748] placeholder:text-[#cbd5e0] focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
                 />
                 {showSlider && (
                   <input
@@ -379,7 +393,7 @@ export default function Home() {
             </label>
           ) : (
             <label className="block">
-              <span className="text-sm font-medium text-[#4a5568]">目標%</span>
+              <span className="text-sm font-medium text-label">目標%</span>
               <div className="flex gap-3 mt-2">
                 <input
                   type="number"
@@ -387,7 +401,7 @@ export default function Home() {
                   placeholder="0"
                   value={percentInput}
                   onChange={(e) => setPercentInput(e.target.value)}
-                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-white border border-[#f0e6dc] text-[#2d3748] placeholder:text-[#cbd5e0] focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+                  className="flex-1 h-14 px-4 text-xl font-semibold rounded-xl bg-input border border-input text-page placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
                 />
                 <input
                   type="range"
@@ -410,7 +424,7 @@ export default function Home() {
               <button
                 key={p}
                 onClick={() => applyPreset(p)}
-                className="flex-1 py-2.5 rounded-xl font-semibold bg-white text-[#718096] border border-[#f0e6dc] hover:border-[#ff6b6b] hover:text-[#ff6b6b] hover:bg-[#fff5f5] transition-colors shadow-sm"
+                className="flex-1 py-2.5 rounded-xl font-semibold bg-card text-muted border border-page hover:border-accent hover:text-accent hover:bg-subtle transition-colors shadow-sm"
               >
                 {p}%
               </button>
@@ -424,27 +438,27 @@ export default function Home() {
             <>
               <div
                 key={displayValue}
-                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? "text-[#ff6b6b]" : "text-[#cbd5e0]"}`}
+                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? "text-accent" : "text-result-empty"}`}
               >
                 {percent !== null ? animatedPercent : "—"}
               </div>
               {percent !== null && totalNum > 0 && (
-                <p className="text-[#718096] mt-2 text-sm relative z-10">
+                <p className="text-muted mt-2 text-sm relative z-10">
                   {targetNum} / {totalNum}
                 </p>
               )}
             </>
           ) : (
             <>
-              <p className="text-sm text-[#718096] mb-1 relative z-10">必要な成果数</p>
+              <p className="text-sm text-muted mb-1 relative z-10">必要な成果数</p>
               <div
                 key={displayValue}
-                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 result-pop ${reverseTarget !== null ? "text-[#ff6b6b]" : "text-[#cbd5e0]"}`}
+                className={`text-6xl sm:text-7xl font-bold tabular-nums relative z-10 result-pop ${reverseTarget !== null ? "text-accent" : "text-result-empty"}`}
               >
                 {reverseTarget !== null ? animatedTarget : "—"}
               </div>
               {reverseTarget !== null && totalNum > 0 && (
-                <p className="text-[#718096] mt-2 text-sm relative z-10">
+                <p className="text-muted mt-2 text-sm relative z-10">
                   {totalNum} の {percentInputNum}%
                 </p>
               )}
@@ -454,13 +468,13 @@ export default function Home() {
 
         {/* Progress bar */}
         <div className="w-full">
-          <div className="h-3 w-full rounded-full bg-[#f0e6dc] overflow-hidden shadow-inner">
+          <div className="h-3 w-full rounded-full bg-progress-track overflow-hidden shadow-inner">
             <div
-              className="h-full rounded-full bg-[#ff6b6b] transition-all duration-300 ease-out shadow-sm"
+              className="h-full rounded-full bg-accent transition-all duration-300 ease-out shadow-sm"
               style={{ width: `${progressValue}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-[#a0aec0] mt-1">
+          <div className="flex justify-between text-xs text-muted mt-1 opacity-80">
             <span>0%</span>
             <span>100%</span>
           </div>
@@ -470,7 +484,7 @@ export default function Home() {
         <button
           onClick={() => handleCopy()}
           disabled={mode === "normal" ? percent === null : reverseTarget === null}
-          className="w-full h-14 flex items-center justify-center gap-2 rounded-xl font-semibold bg-[#ff6b6b] text-white hover:bg-[#ff8c8c] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#ff6b6b] transition-all shadow-md shadow-[#ff6b6b]/30"
+          className="w-full h-14 flex items-center justify-center gap-2 rounded-xl font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40 transition-all shadow-md shadow-[#ff6b6b]/30"
         >
           {copied ? (
             <>コピーしました</>
@@ -487,7 +501,7 @@ export default function Home() {
           totalNum > 0 && (
             <button
               onClick={addToHistory}
-              className="w-full h-12 flex items-center justify-center rounded-xl font-medium border-2 border-dashed border-[#ff6b6b]/40 text-[#ff6b6b] hover:bg-[#fff5f5] hover:border-[#ff6b6b] transition-colors"
+              className="w-full h-12 flex items-center justify-center rounded-xl font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
             >
               履歴に追加
             </button>
@@ -495,29 +509,29 @@ export default function Home() {
 
         {/* History list - 共有ボタン付き */}
         {history.length > 0 && (
-          <section className="pt-6 border-t border-[#f0e6dc]">
-            <h2 className="text-sm font-semibold text-[#4a5568] mb-4">履歴</h2>
+          <section className="pt-6 border-t border-page">
+            <h2 className="text-sm font-semibold text-label mb-4">履歴</h2>
             <ul className="space-y-2">
               {history.map((item) => (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between gap-3 py-3 px-4 rounded-xl bg-white border border-[#f0e6dc] shadow-sm hover:shadow-md transition-shadow"
+                  className="flex items-center justify-between gap-3 py-3 px-4 rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <span className="text-sm text-[#4a5568] truncate flex-1 min-w-0">
+                  <span className="text-sm text-label truncate flex-1 min-w-0">
                     {item.target} / {item.total} ={" "}
-                    <span className="text-[#ff6b6b] font-semibold">{item.percent}%</span>
+                    <span className="text-accent font-semibold">{item.percent}%</span>
                   </span>
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => shareHistoryItem(item)}
-                      className="p-2 rounded-lg text-[#a0aec0] hover:text-[#ff6b6b] hover:bg-[#fff5f5] transition-colors"
+                      className="p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
                       aria-label="共有"
                     >
                       <Share2 size={18} />
                     </button>
                     <button
                       onClick={() => removeFromHistory(item.id)}
-                      className="p-2 rounded-lg text-[#a0aec0] hover:text-[#ff6b6b] hover:bg-[#fff5f5] transition-colors"
+                      className="p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
                       aria-label="削除"
                     >
                       <Trash2 size={18} />
