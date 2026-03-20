@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag } from "lucide-react";
+import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowLeftRight } from "lucide-react";
 
 const STORAGE_KEY = "percent-quick-history";
 const COMPARE_STORAGE_KEY = "percent-quick-compare";
@@ -29,8 +29,6 @@ type CompareItem = {
   createdAt: number;
 };
 
-const QUICK_PRESETS = [25, 50, 75, 100] as const;
-
 /** iOSのtype="number"の二重表示バグを避けるため、数値のみ許可する */
 function sanitizeNumericInput(value: string): string {
   const filtered = value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
@@ -43,7 +41,7 @@ function formatYen(n: number): string {
 
 function calcPercent(total: number, target: number): number | null {
   if (total <= 0 || !Number.isFinite(total) || !Number.isFinite(target)) return null;
-  return Math.round((target / total) * 10000) / 100;
+  return Math.round((target / total) * 100);
 }
 
 function loadHistory(): HistoryItem[] {
@@ -140,11 +138,12 @@ function useAnimatedValue(target: number, isPercent: boolean, duration = 300) {
     };
   }, [target, duration]);
 
-  return isPercent ? `${Math.round(display * 100) / 100}%` : String(Math.round(display * 100) / 100);
+  return isPercent ? `${Math.round(display)}%` : String(Math.round(display));
 }
 
 export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>("percent");
+  const [showDiscountedValue, setShowDiscountedValue] = useState(false);
   const [total, setTotal] = useState<string>("");
   const [target, setTarget] = useState<string>("");
   const [originalPrice, setOriginalPrice] = useState<string>("");
@@ -257,6 +256,7 @@ export default function Home() {
     setDiscountRate("");
     setUnitPrice("");
     setSecondBagUnitPrice("");
+    setShowDiscountedValue(false);
   }, []);
 
   const addToCompareList = useCallback(() => {
@@ -392,15 +392,37 @@ export default function Home() {
 
         {/* Result display */}
         <div className="shrink-0 flex flex-col items-center justify-center py-3 sm:py-6 relative">
-          <div
-            key={displayValue}
-            className={`text-5xl sm:text-6xl md:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? "text-accent" : "text-result-empty"}`}
-          >
-            {percent !== null ? animatedPercent : "—"}
+          <div className="flex items-center justify-center gap-2 sm:gap-3">
+            <div
+              key={displayValue}
+              className={`text-5xl sm:text-6xl md:text-7xl font-bold tabular-nums relative z-10 result-pop ${percent !== null ? "text-accent" : "text-result-empty"}`}
+            >
+              {percent !== null
+                ? showDiscountedValue
+                  ? Math.round(totalNum - targetNum)
+                  : animatedPercent
+                : "—"}
+            </div>
+            {percent !== null && totalNum > 0 && (
+              <button
+                onClick={() => setShowDiscountedValue((v) => !v)}
+                className="p-2 sm:p-2.5 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors shrink-0"
+                aria-label={showDiscountedValue ? "割合を表示" : "割引された数値を表示"}
+                title={showDiscountedValue ? "割合を表示" : "割引された数値を表示"}
+              >
+                <ArrowLeftRight size={24} className="sm:w-6 sm:h-6" />
+              </button>
+            )}
           </div>
           {percent !== null && totalNum > 0 && (
             <p className="text-muted mt-2 text-sm relative z-10">
-              {targetNum} / {totalNum}
+              {showDiscountedValue ? (
+                <>割引された数値: {Math.round(totalNum - targetNum)}</>
+              ) : (
+                <>
+                  {targetNum} / {totalNum}
+                </>
+              )}
             </p>
           )}
         </div>
@@ -509,21 +531,6 @@ export default function Home() {
             />
           </label>
         </div>
-
-        {/* 割引モード クイックプリセット */}
-        {originalPriceNum > 0 && (
-          <div className="shrink-0 flex gap-1.5 sm:gap-2">
-            {QUICK_PRESETS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setDiscountRate(String(p))}
-                className="flex-1 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-card text-muted border border-page hover:border-accent hover:text-accent hover:bg-subtle transition-colors shadow-sm"
-              >
-                {p}%
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* 割引モード 結果 */}
         <div className="shrink-0 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm overflow-hidden">
