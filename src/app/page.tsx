@@ -15,6 +15,7 @@ type HistoryItem = {
   total: number;
   target: number;
   percent: number;
+  isInverted?: boolean;
   createdAt: number;
 };
 
@@ -148,6 +149,7 @@ export default function Home() {
   const [target, setTarget] = useState<string>("");
   const [originalPrice, setOriginalPrice] = useState<string>("");
   const [discountRate, setDiscountRate] = useState<string>("");
+  const [salePrice, setSalePrice] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [secondBagUnitPrice, setSecondBagUnitPrice] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -174,9 +176,30 @@ export default function Home() {
   const totalNum = parseFloat(total) || 0;
   const targetNum = parseFloat(target) || 0;
   const originalPriceNum = parseFloat(originalPrice) || 0;
-  const discountRateNum = Math.min(100, Math.max(0, parseFloat(discountRate) || 0));
-  const discountAmount = originalPriceNum > 0 ? Math.round(originalPriceNum * (discountRateNum / 100) * 100) / 100 : 0;
-  const priceAfterDiscount = originalPriceNum > 0 ? Math.round(originalPriceNum * (1 - discountRateNum / 100) * 100) / 100 : 0;
+  const salePriceNum = parseFloat(salePrice) || 0;
+  const discountRateFromSale =
+    originalPriceNum > 0 && salePriceNum > 0
+      ? Math.round(((originalPriceNum - salePriceNum) / originalPriceNum) * 10000) / 100
+      : null;
+  const discountRateNum =
+    discountRateFromSale !== null
+      ? Math.min(100, Math.max(0, discountRateFromSale))
+      : Math.min(100, Math.max(0, parseFloat(discountRate) || 0));
+  const discountAmount =
+    originalPriceNum > 0
+      ? Math.round(
+          (discountRateFromSale !== null
+            ? originalPriceNum - salePriceNum
+            : originalPriceNum * (discountRateNum / 100)) *
+            100
+        ) / 100
+      : 0;
+  const priceAfterDiscount =
+    originalPriceNum > 0
+      ? Math.round(
+          (discountRateFromSale !== null ? salePriceNum : originalPriceNum * (1 - discountRateNum / 100)) * 100
+        ) / 100
+      : 0;
 
   const percent = calcPercent(totalNum, targetNum);
   const displayValue = percent ?? 0;
@@ -189,11 +212,12 @@ export default function Home() {
       id: crypto.randomUUID(),
       total: totalNum,
       target: targetNum,
-      percent,
+      percent: isInverted ? 100 - percent : percent,
+      isInverted: isInverted || undefined,
       createdAt: Date.now(),
     };
     setHistory((prev) => [item, ...prev].slice(0, 50));
-  }, [percent, totalNum, targetNum]);
+  }, [percent, totalNum, targetNum, isInverted]);
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -255,6 +279,7 @@ export default function Home() {
     setTarget("");
     setOriginalPrice("");
     setDiscountRate("");
+    setSalePrice("");
     setUnitPrice("");
     setSecondBagUnitPrice("");
     setIsInverted(false);
@@ -294,7 +319,9 @@ export default function Home() {
   };
 
   const shareHistoryItem = async (item: HistoryItem) => {
-    const text = `${item.target} は ${item.total} の ${item.percent}% です`;
+    const text = item.isInverted
+      ? `残り: (${item.total} - ${item.target}) / ${item.total} = ${item.percent}%`
+      : `${item.target} は ${item.total} の ${item.percent}% です`;
     try {
       await navigator.clipboard.writeText(text);
       setToastVisible(true);
@@ -462,8 +489,17 @@ export default function Home() {
                   className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
                 >
                   <span className="text-xs sm:text-sm text-label truncate flex-1 min-w-0">
-                    {item.target} / {item.total} ={" "}
-                    <span className="text-accent font-semibold">{item.percent}%</span>
+                    {item.isInverted ? (
+                      <>
+                        残り: ({item.total} - {item.target}) / {item.total} ={" "}
+                        <span className="text-[#22c55e] font-semibold">{item.percent}%</span>
+                      </>
+                    ) : (
+                      <>
+                        {item.target} / {item.total} ={" "}
+                        <span className="text-accent font-semibold">{item.percent}%</span>
+                      </>
+                    )}
                   </span>
                   <div className="flex gap-1 shrink-0">
                     <button
@@ -514,11 +550,23 @@ export default function Home() {
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
           </label>
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">セール価格（円）</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={salePrice}
+              onChange={(e) => setSalePrice(sanitizeNumericInput(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
         </div>
 
         {/* 割引モード 結果 */}
         <div className="shrink-0 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm overflow-hidden">
-          {originalPriceNum > 0 ? (
+          {originalPriceNum > 0 && (discountRateNum > 0 || salePriceNum > 0) ? (
             <ul className="divide-y divide-[var(--border)]">
               <li className="flex justify-between items-center gap-3 py-3 px-4">
                 <span className="text-sm text-muted">割引率</span>
@@ -528,8 +576,10 @@ export default function Home() {
               </li>
               <li className="flex justify-between items-center gap-3 py-3 px-4">
                 <span className="text-sm text-muted">割引額</span>
-                <span className="text-base sm:text-lg font-bold text-[#22c55e] tabular-nums">
-                  -{formatYen(discountAmount)}
+                <span
+                  className={`text-base sm:text-lg font-bold tabular-nums ${discountAmount >= 0 ? "text-[#22c55e]" : "text-accent"}`}
+                >
+                  {discountAmount >= 0 ? `-${formatYen(discountAmount)}` : `+${formatYen(-discountAmount)}`}
                 </span>
               </li>
               <li className="flex justify-between items-center gap-3 py-3 px-4">
@@ -541,14 +591,14 @@ export default function Home() {
             </ul>
           ) : (
             <div className="py-8 text-center">
-              <p className="text-result-empty text-lg">元の価格を入力</p>
+              <p className="text-result-empty text-lg">元の価格と割引率、またはセール価格を入力</p>
             </div>
           )}
         </div>
 
         <button
           onClick={() => handleCopy()}
-          disabled={originalPriceNum <= 0}
+          disabled={originalPriceNum <= 0 || (discountRateNum <= 0 && salePriceNum <= 0)}
           className="shrink-0 w-full h-11 sm:h-14 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40 transition-all shadow-md shadow-[#ff6b6b]/30"
         >
           <Copy size={18} className="sm:w-5 sm:h-5" />
