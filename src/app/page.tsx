@@ -1016,19 +1016,6 @@ export default function Home() {
             />
           </label>
           <label className="block">
-            <span className="text-xs sm:text-sm font-medium text-label">割引率（%）</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="0"
-              value={discountRate}
-              onChange={(e) => setDiscountRate(sanitizeNumericInput(e.target.value))}
-              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
-            />
-          </label>
-          <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">セール価格（円）</span>
             <input
               type="text"
@@ -1037,6 +1024,19 @@ export default function Home() {
               placeholder="0"
               value={salePrice}
               onChange={(e) => setSalePrice(sanitizeNumericInput(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">割引率（%）</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0"
+              value={discountRate}
+              onChange={(e) => setDiscountRate(sanitizeNumericInput(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
