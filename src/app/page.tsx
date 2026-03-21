@@ -56,6 +56,7 @@ type DiscountHistoryItem = {
 
 type FleaHistoryItem = {
   id: string;
+  productName?: string;
   salePrice: number;
   commissionRate: number;
   transferFee: number;
@@ -240,6 +241,7 @@ export default function Home() {
   const [salePrice, setSalePrice] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [secondBagUnitPrice, setSecondBagUnitPrice] = useState<string>("");
+  const [fleaProductName, setFleaProductName] = useState<string>("");
   const [fleaSalePrice, setFleaSalePrice] = useState<string>("");
   const [fleaCommissionRate, setFleaCommissionRate] = useState<string>("10");
   const [fleaTransferFee, setFleaTransferFee] = useState<string>("200");
@@ -254,6 +256,9 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState("コピーしました");
   const [premiumModalOpen, setPremiumModalOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [licenseKeyInput, setLicenseKeyInput] = useState("");
+  const [licenseVerifyLoading, setLicenseVerifyLoading] = useState(false);
+  const [licenseVerifyError, setLicenseVerifyError] = useState<string | null>(null);
   const { setTheme, resolvedTheme } = useTheme();
   const { isPremium, setPremium, mounted: premiumMounted } = usePremium();
   const { accentColor, setAccentColor, accentColors } = useAccentColor(isPremium);
@@ -324,10 +329,20 @@ export default function Home() {
         if (data.completed) {
           setPremium(true);
           setPremiumModalOpen(false);
-          setToastMessage("Premiumを購入しました");
+          const key = data.licenseKey;
+          if (key) {
+            setToastMessage(`Premiumを購入しました。ライセンスキー: ${key}（別のブラウザで使う場合は保存してください）`);
+            try {
+              await navigator.clipboard.writeText(key);
+            } catch {
+              // ignore
+            }
+          } else {
+            setToastMessage("Premiumを購入しました");
+          }
           setToastVisible(true);
-          setTimeout(() => setToastVisible(false), 2500);
-          setTimeout(() => setToastMessage("コピーしました"), 2500);
+          setTimeout(() => setToastVisible(false), 4000);
+          setTimeout(() => setToastMessage("コピーしました"), 4000);
           window.history.replaceState({}, "", window.location.pathname);
           return;
         }
@@ -457,7 +472,8 @@ export default function Home() {
   const handleCopy = useCallback(async () => {
     if (appMode === "flea") {
       if (fleaSalePriceNum <= 0) return;
-      const text = `売値${formatYen(fleaSalePriceNum)} → 純利益${formatYen(fleaNetProfit)}（手数料${formatYen(fleaCommissionAmount)}、振込${formatYen(fleaTransferFeeNum)}）`;
+      const namePart = fleaProductName.trim() ? `（${fleaProductName.trim()}）` : "";
+      const text = `${namePart}売値${formatYen(fleaSalePriceNum)} → 純利益${formatYen(fleaNetProfit)}（手数料${formatYen(fleaCommissionAmount)}、振込${formatYen(fleaTransferFeeNum)}）`;
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
@@ -508,7 +524,7 @@ export default function Home() {
     } catch {
       // fallback
     }
-  }, [appMode, percent, discountResult, originalPriceNum, priceAfterDiscount, discountAmount, fleaSalePriceNum, fleaNetProfit, fleaCommissionAmount, fleaTransferFeeNum]);
+  }, [appMode, percent, discountResult, originalPriceNum, priceAfterDiscount, discountAmount, fleaProductName, fleaSalePriceNum, fleaNetProfit, fleaCommissionAmount, fleaTransferFeeNum]);
 
   const handleClear = useCallback(() => {
     setTotal("");
@@ -518,6 +534,7 @@ export default function Home() {
     setSalePrice("");
     setUnitPrice("");
     setSecondBagUnitPrice("");
+    setFleaProductName("");
     setFleaSalePrice("");
     setFleaCommissionRate("10");
     setFleaTransferFee("200");
@@ -598,6 +615,7 @@ export default function Home() {
     if (fleaSalePriceNum <= 0) return;
     const item: FleaHistoryItem = {
       id: crypto.randomUUID(),
+      productName: fleaProductName.trim() || undefined,
       salePrice: fleaSalePriceNum,
       commissionRate: fleaCommissionRateNum,
       transferFee: fleaTransferFeeNum,
@@ -615,6 +633,7 @@ export default function Home() {
     setTimeout(() => setToastVisible(false), 2000);
     setTimeout(() => fleaHistorySectionRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   }, [
+    fleaProductName,
     fleaSalePriceNum,
     fleaCommissionRateNum,
     fleaTransferFeeNum,
@@ -694,10 +713,11 @@ export default function Home() {
   }, [discountHistory]);
 
   const exportFleaHistory = useCallback(() => {
-    const header = "売値,手数料率(%),振込手数料,送料,原価,販売手数料,純利益,日時\n";
+    const escapeCsv = (s: string) => (s.includes(",") || s.includes('"') ? `"${String(s).replace(/"/g, '""')}"` : s);
+    const header = "商品名,売値,手数料率(%),振込手数料,送料,原価,販売手数料,純利益,日時\n";
     const rows = fleaHistory.map(
       (item) =>
-        `${item.salePrice},${item.commissionRate},${item.transferFee},${item.shippingCost},${item.cost},${item.commissionAmount},${item.netProfit},${new Date(item.createdAt).toLocaleString("ja-JP")}`
+        `${escapeCsv(item.productName ?? "")},${item.salePrice},${item.commissionRate},${item.transferFee},${item.shippingCost},${item.cost},${item.commissionAmount},${item.netProfit},${new Date(item.createdAt).toLocaleString("ja-JP")}`
     );
     downloadCSV(header + rows.join("\n"), `qp-フリマ履歴-${new Date().toISOString().slice(0, 10)}.csv`);
     setToastMessage("フリマ履歴をエクスポートしました");
@@ -1196,6 +1216,18 @@ export default function Home() {
         </div>
         <div className="shrink-0 space-y-2 sm:space-y-4">
           <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">商品名</span>
+            <input
+              type="text"
+              autoComplete="off"
+              placeholder="例: 未使用の本"
+              value={fleaProductName}
+              onChange={(e) => setFleaProductName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-base sm:text-lg font-medium rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+          <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">売値（円）</span>
             <input
               type="text"
@@ -1340,7 +1372,7 @@ export default function Home() {
                 >
                   <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden pr-1">
                     <span className="text-xs sm:text-sm text-label block whitespace-nowrap">
-                      売値{formatYen(item.salePrice)} → 純利益{formatYen(item.netProfit)}
+                      {item.productName ? `（${item.productName}）` : ""}売値{formatYen(item.salePrice)} → 純利益{formatYen(item.netProfit)}
                     </span>
                     <span className="text-xs text-muted block">
                       手数料{formatYen(item.commissionAmount)}・振込{formatYen(item.transferFee)}
@@ -1350,7 +1382,8 @@ export default function Home() {
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => {
-                        const t = `売値${formatYen(item.salePrice)} → 純利益${formatYen(item.netProfit)}`;
+                        const namePart = item.productName ? `（${item.productName}）` : "";
+                        const t = `${namePart}売値${formatYen(item.salePrice)} → 純利益${formatYen(item.netProfit)}`;
                         navigator.clipboard.writeText(t);
                         setToastVisible(true);
                         setTimeout(() => setToastVisible(false), 2500);
@@ -1599,7 +1632,64 @@ export default function Home() {
               >
                 読み込み中...
               </button>
-            ) : useSquareCheckout || usePayPayCheckout ? (
+            ) : (
+              <>
+            <div className="border-t border-page pt-4 mt-4">
+              <p className="text-xs font-medium text-label mb-2">ライセンスキーをお持ちの方</p>
+              <p className="text-xs text-muted mb-2">別のブラウザ・端末でPremiumを使う場合は、購入時に発行されたキーを入力してください。</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="QP-XXXX-XXXX"
+                  value={licenseKeyInput}
+                  onChange={(e) => {
+                    setLicenseKeyInput(e.target.value.toUpperCase());
+                    setLicenseVerifyError(null);
+                  }}
+                  className="flex-1 px-3 py-2 text-sm rounded-lg bg-input border border-input text-input-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
+                />
+                <button
+                  onClick={async () => {
+                    const key = licenseKeyInput.trim();
+                    if (!key) return;
+                    setLicenseVerifyLoading(true);
+                    setLicenseVerifyError(null);
+                    try {
+                      const res = await fetch("/api/verify-license", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ licenseKey: key }),
+                      });
+                      const data = await res.json();
+                      if (data.valid) {
+                        setPremium(true);
+                        setLicenseKeyInput("");
+                        setLicenseVerifyError(null);
+                        setToastMessage("Premiumを有効にしました");
+                        setToastVisible(true);
+                        setTimeout(() => setToastVisible(false), 2500);
+                      } else {
+                        setLicenseVerifyError(data.error ?? "無効なライセンスキーです");
+                      }
+                    } catch {
+                      setLicenseVerifyError("検証中にエラーが発生しました");
+                    } finally {
+                      setLicenseVerifyLoading(false);
+                    }
+                  }}
+                  disabled={!licenseKeyInput.trim() || licenseVerifyLoading}
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-accent text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  {licenseVerifyLoading ? "確認中..." : "有効化"}
+                </button>
+              </div>
+              {licenseVerifyError && (
+                <p className="text-xs text-accent mt-1">{licenseVerifyError}</p>
+              )}
+            </div>
+            <p className="text-xs font-medium text-label mt-4 mb-2">購入する</p>
+            {useSquareCheckout || usePayPayCheckout ? (
               <div className="space-y-2">
                 {useSquareCheckout && (
                   <button
@@ -1645,6 +1735,8 @@ export default function Home() {
               >
                 購入する（デモ）
               </button>
+            )}
+            </>
             )}
           </div>
         </div>

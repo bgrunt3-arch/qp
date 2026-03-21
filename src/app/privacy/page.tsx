@@ -25,6 +25,7 @@ export default function PrivacyPage() {
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>計算履歴（ブラウザのローカルストレージに保存、サーバーへ送信しません）</li>
             <li>Premium購入状態（ブラウザのローカルストレージに保存）</li>
+            <li>ライセンスキー（購入時に発行、サーバーで検証用に保存。決済IDとの紐付けのみで個人情報は含みません）</li>
           </ul>
 
           <h2 className="text-lg font-semibold">2. 第三者サービス</h2>
