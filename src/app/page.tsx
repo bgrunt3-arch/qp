@@ -541,12 +541,20 @@ export default function Home() {
           <>
             <button
               onClick={() => setPremiumModalOpen(true)}
-              className={`absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-lg transition-colors ${
-                isPremium ? "text-amber-500" : "text-muted hover:text-accent hover:bg-subtle"
+              className={`absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 rounded-lg transition-colors flex items-center gap-1 ${
+                isPremium ? "text-accent hover:bg-subtle" : "text-muted hover:text-accent hover:bg-subtle"
               }`}
-              aria-label={isPremium ? "Premium" : "Premiumを購入"}
+              aria-label={isPremium ? "Premium（カラー変更）" : "Premiumを購入"}
+              title={isPremium ? "Premium（アクセントカラー変更可）" : "Premiumを購入"}
             >
               <Crown size={18} />
+              {isPremium && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: accentColor }}
+                  aria-hidden
+                />
+              )}
             </button>
             <button
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
