@@ -30,7 +30,7 @@ export default function TermsPage() {
 
           <h2 className="text-lg font-semibold">第3条（Premium購入）</h2>
           <p>
-            Premiumプランは買い切り型の有料オプションです。購入後、広告が非表示になります。返金については、Squareの決済規約に従います。
+            Premiumプランは買い切り型の有料オプションです。購入後、広告が非表示になり、アクセントカラーの変更、履歴・比較リストの保存上限拡張（無料50件→最大200件）、履歴のCSVエクスポートが可能になります。返金については、Squareの決済規約に従います。
           </p>
 
           <h2 className="text-lg font-semibold">第4条（免責事項）</h2>

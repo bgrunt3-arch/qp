@@ -2,14 +2,22 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown, Crown, X } from "lucide-react";
+import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown, Crown, X, Download } from "lucide-react";
 import { AdBanner } from "@/components/AdBanner";
 import { usePremium } from "@/hooks/usePremium";
+import { useAccentColor } from "@/hooks/useAccentColor";
 
 const STORAGE_KEY = "percent-quick-history";
 const COMPARE_STORAGE_KEY = "percent-quick-compare";
 const DISCOUNT_STORAGE_KEY = "percent-quick-discount-history";
 const APP_NAME = "QuickPercent";
+
+const HISTORY_LIMIT_FREE = 50;
+const HISTORY_LIMIT_PREMIUM = 200;
+const COMPARE_LIMIT_FREE = 50;
+const COMPARE_LIMIT_PREMIUM = 100;
+const DISCOUNT_LIMIT_FREE = 50;
+const DISCOUNT_LIMIT_PREMIUM = 200;
 
 type AppMode = "percent" | "compare" | "discount";
 
@@ -53,6 +61,17 @@ function sanitizeNumericInput(value: string): string {
 
 function formatYen(n: number): string {
   return `${Math.round(n).toLocaleString("ja-JP")}円`;
+}
+
+function downloadCSV(content: string, filename: string) {
+  const bom = "\uFEFF";
+  const blob = new Blob([bom + content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function calcPercent(total: number, target: number): number | null {
@@ -196,12 +215,29 @@ export default function Home() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
   const { isPremium, setPremium, mounted: premiumMounted } = usePremium();
+  const { accentColor, setAccentColor, accentColors } = useAccentColor(isPremium);
   const [mounted, setMounted] = useState(false);
 
-  const premiumPurchaseUrl = process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL;
-  const useSquareCheckout = Boolean(process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID);
+  const [paymentConfig, setPaymentConfig] = useState<{
+    squareEnabled: boolean;
+    premiumPurchaseUrl: string | null;
+  } | null>(null);
+  const useSquareCheckout = paymentConfig?.squareEnabled ?? false;
+  const premiumPurchaseUrl = paymentConfig?.premiumPurchaseUrl ?? process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL ?? "";
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    fetch("/api/payment-config")
+      .then((r) => r.json())
+      .then((data: { squareEnabled?: boolean; premiumPurchaseUrl?: string | null }) =>
+        setPaymentConfig({
+          squareEnabled: Boolean(data.squareEnabled),
+          premiumPurchaseUrl: data.premiumPurchaseUrl ?? null,
+        })
+      )
+      .catch(() => setPaymentConfig({ squareEnabled: false, premiumPurchaseUrl: null }));
+  }, []);
 
   // Square決済成功時のコールバック
   useEffect(() => {
@@ -263,6 +299,10 @@ export default function Home() {
   const displayTarget = isInverted ? 100 - displayValue : displayValue;
   const animatedPercent = useAnimatedValue(displayTarget, true, 350);
 
+  const historyLimit = isPremium ? HISTORY_LIMIT_PREMIUM : HISTORY_LIMIT_FREE;
+  const compareLimit = isPremium ? COMPARE_LIMIT_PREMIUM : COMPARE_LIMIT_FREE;
+  const discountLimit = isPremium ? DISCOUNT_LIMIT_PREMIUM : DISCOUNT_LIMIT_FREE;
+
   const addToHistory = useCallback(() => {
     if (percent === null || totalNum <= 0) return;
     const item: HistoryItem = {
@@ -273,8 +313,8 @@ export default function Home() {
       isInverted: isInverted || undefined,
       createdAt: Date.now(),
     };
-    setHistory((prev) => [item, ...prev].slice(0, 50));
-  }, [percent, totalNum, targetNum, isInverted]);
+    setHistory((prev) => [item, ...prev].slice(0, historyLimit));
+  }, [percent, totalNum, targetNum, isInverted, historyLimit]);
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -358,8 +398,8 @@ export default function Home() {
       discountRate: discountResult.discountRate,
       createdAt: Date.now(),
     };
-    setCompareList((prev) => [item, ...prev].slice(0, 50));
-  }, [discountResult, unitPriceNum, compareQuantity]);
+    setCompareList((prev) => [item, ...prev].slice(0, compareLimit));
+  }, [discountResult, unitPriceNum, compareQuantity, compareLimit]);
 
   const removeFromCompareList = (id: string) => {
     setCompareList((prev) => prev.filter((c) => c.id !== id));
@@ -390,8 +430,8 @@ export default function Home() {
       priceAfterDiscount,
       createdAt: Date.now(),
     };
-    setDiscountHistory((prev) => [item, ...prev].slice(0, 50));
-  }, [originalPriceNum, discountRateNum, salePriceNum, discountAmount, priceAfterDiscount]);
+    setDiscountHistory((prev) => [item, ...prev].slice(0, discountLimit));
+  }, [originalPriceNum, discountRateNum, salePriceNum, discountAmount, priceAfterDiscount, discountLimit]);
 
   const removeFromDiscountHistory = (id: string) => {
     setDiscountHistory((prev) => prev.filter((h) => h.id !== id));
@@ -423,6 +463,42 @@ export default function Home() {
       // ignore
     }
   };
+
+  const exportHistory = useCallback(() => {
+    const header = "全体,目標,割合(%),逆算,日時\n";
+    const rows = history.map(
+      (item) =>
+        `${item.total},${item.target},${item.percent},${item.isInverted ? "はい" : "いいえ"},${new Date(item.createdAt).toLocaleString("ja-JP")}`
+    );
+    downloadCSV(header + rows.join("\n"), `qp-履歴-${new Date().toISOString().slice(0, 10)}.csv`);
+    setToastMessage("履歴をエクスポートしました");
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+  }, [history]);
+
+  const exportCompareList = useCallback(() => {
+    const header = "単価,個数,実際の価格,お得額,割引率(%),日時\n";
+    const rows = compareList.map(
+      (item) =>
+        `${item.unitPrice},${item.quantity},${item.actualPrice},${item.savingAmount},${item.discountRate.toFixed(1)},${new Date(item.createdAt).toLocaleString("ja-JP")}`
+    );
+    downloadCSV(header + rows.join("\n"), `qp-比較リスト-${new Date().toISOString().slice(0, 10)}.csv`);
+    setToastMessage("比較リストをエクスポートしました");
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+  }, [compareList]);
+
+  const exportDiscountHistory = useCallback(() => {
+    const header = "元の価格,割引率(%),割引額,割引後価格,日時\n";
+    const rows = discountHistory.map(
+      (item) =>
+        `${item.originalPrice},${item.discountRate},${item.discountAmount},${item.priceAfterDiscount},${new Date(item.createdAt).toLocaleString("ja-JP")}`
+    );
+    downloadCSV(header + rows.join("\n"), `qp-割引履歴-${new Date().toISOString().slice(0, 10)}.csv`);
+    setToastMessage("割引履歴をエクスポートしました");
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+  }, [discountHistory]);
 
   const progressValue = percent !== null ? Math.min(100, Math.max(0, percent)) : 0;
 
@@ -613,7 +689,19 @@ export default function Home() {
         {/* History list */}
         {history.length > 0 && (
           <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
-            <h2 className="text-xs sm:text-sm font-semibold text-label mb-2 sm:mb-4 shrink-0">履歴</h2>
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
+              <h2 className="text-xs sm:text-sm font-semibold text-label">履歴</h2>
+              {isPremium && (
+                <button
+                  onClick={exportHistory}
+                  className="p-1.5 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                  aria-label="エクスポート"
+                  title="CSVでダウンロード"
+                >
+                  <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+              )}
+            </div>
             <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
               {history.map((item) => (
                 <li
@@ -751,7 +839,19 @@ export default function Home() {
 
         {discountHistory.length > 0 && (
           <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
-            <h2 className="text-xs sm:text-sm font-semibold text-label mb-2 sm:mb-4 shrink-0">履歴</h2>
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
+              <h2 className="text-xs sm:text-sm font-semibold text-label">履歴</h2>
+              {isPremium && (
+                <button
+                  onClick={exportDiscountHistory}
+                  className="p-1.5 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                  aria-label="エクスポート"
+                  title="CSVでダウンロード"
+                >
+                  <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+              )}
+            </div>
             <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
               {discountHistory.map((item) => (
                 <li
@@ -895,7 +995,19 @@ export default function Home() {
         {/* 比較リスト（プレイリスト風） */}
         {compareList.length > 0 && (
           <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
-            <h2 className="text-xs sm:text-sm font-semibold text-label mb-2 sm:mb-4 shrink-0">比較リスト</h2>
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
+              <h2 className="text-xs sm:text-sm font-semibold text-label">比較リスト</h2>
+              {isPremium && (
+                <button
+                  onClick={exportCompareList}
+                  className="p-1.5 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                  aria-label="エクスポート"
+                  title="CSVでダウンロード"
+                >
+                  <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+              )}
+            </div>
             <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
               {compareList.map((item) => (
                 <li
@@ -970,12 +1082,31 @@ export default function Home() {
               </button>
             </div>
             <p className="text-sm text-muted mb-4">
-              広告を非表示にして、快適にご利用いただけます。買い切りで永続的に有効です。
+              広告非表示・アクセントカラー変更・履歴の上限拡張・CSVエクスポート。買い切りで永続的に有効です。
             </p>
             <p className="text-2xl font-bold text-accent mb-6">100円</p>
             {isPremium ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <p className="text-sm text-[#22c55e] font-medium">ご購入済みです</p>
+                <div>
+                  <p className="text-xs text-muted mb-2">アクセントカラー（Premium限定）</p>
+                  <div className="flex flex-wrap gap-2">
+                    {accentColors.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => setAccentColor(c.value)}
+                        className={`w-8 h-8 rounded-full transition-all ${
+                          accentColor === c.value
+                            ? "ring-2 ring-offset-2 ring-offset-card ring-foreground scale-110"
+                            : "hover:scale-105"
+                        }`}
+                        style={{ backgroundColor: c.value }}
+                        aria-label={c.name}
+                        title={c.name}
+                      />
+                    ))}
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     setPremium(false);
@@ -992,6 +1123,13 @@ export default function Home() {
                   購入をやり直す（リセット）
                 </button>
               </div>
+            ) : paymentConfig === null ? (
+              <button
+                disabled
+                className="w-full py-3 rounded-xl font-semibold bg-muted text-muted-foreground cursor-not-allowed"
+              >
+                読み込み中...
+              </button>
             ) : useSquareCheckout ? (
               <button
                 onClick={handleSquareCheckout}

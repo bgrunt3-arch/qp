@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+const ADSENSE_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_ID;
 
 let adsensePushed = false;
 
@@ -12,7 +13,7 @@ type AdBannerProps = {
   className?: string;
 };
 
-export function AdBanner({ slot = "1234567890", format = "auto", className = "" }: AdBannerProps) {
+export function AdBanner({ slot, format = "auto", className = "" }: AdBannerProps) {
   useEffect(() => {
     if (!ADSENSE_CLIENT || typeof window === "undefined" || adsensePushed) return;
     try {
@@ -24,12 +25,15 @@ export function AdBanner({ slot = "1234567890", format = "auto", className = "" 
     }
   }, []);
 
-  if (!ADSENSE_CLIENT) {
+  const effectiveSlot = slot ?? ADSENSE_SLOT ?? "1234567890";
+  const isPlaceholder = effectiveSlot === "1234567890";
+
+  if (!ADSENSE_CLIENT || isPlaceholder) {
     return (
       <div
         className={`flex items-center justify-center min-h-[90px] rounded-lg bg-subtle/50 border border-page text-muted text-xs ${className}`}
       >
-        広告枠
+        {!ADSENSE_CLIENT ? "広告枠" : "広告枠（NEXT_PUBLIC_ADSENSE_SLOT_IDを設定）"}
       </div>
     );
   }
@@ -38,7 +42,7 @@ export function AdBanner({ slot = "1234567890", format = "auto", className = "" 
     <ins
       className={`adsbygoogle block ${className}`}
       data-ad-client={ADSENSE_CLIENT}
-      data-ad-slot={slot}
+      data-ad-slot={effectiveSlot}
       data-ad-format={format}
       data-full-width-responsive={format === "auto" ? "true" : undefined}
       style={{ display: "block", minHeight: format === "auto" ? 90 : 50 }}
