@@ -57,10 +57,9 @@ export async function POST(req: NextRequest) {
 
     if (status !== 200 && status !== 201) {
       const code = body?.resultInfo?.code ?? errMsg ?? "UNKNOWN";
-      return NextResponse.json(
-        { error: `PayPay: ${code}` },
-        { status: status >= 400 && status < 600 ? status : 500 }
-      );
+      const httpStatus =
+        status != null && status >= 400 && status < 600 ? status : 500;
+      return NextResponse.json({ error: `PayPay: ${code}` }, { status: httpStatus });
     }
 
     const url = body?.data?.url;
