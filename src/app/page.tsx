@@ -303,6 +303,8 @@ export default function Home() {
   const compareLimit = isPremium ? COMPARE_LIMIT_PREMIUM : COMPARE_LIMIT_FREE;
   const discountLimit = isPremium ? DISCOUNT_LIMIT_PREMIUM : DISCOUNT_LIMIT_FREE;
 
+  const historySectionRef = useRef<HTMLElement>(null);
+
   const addToHistory = useCallback(() => {
     if (percent === null || totalNum <= 0) return;
     const item: HistoryItem = {
@@ -313,8 +315,14 @@ export default function Home() {
       isInverted: isInverted || undefined,
       createdAt: Date.now(),
     };
-    setHistory((prev) => [item, ...prev].slice(0, historyLimit));
-  }, [percent, totalNum, targetNum, isInverted, historyLimit]);
+    const next = [item, ...history].slice(0, historyLimit);
+    setHistory(next);
+    saveHistory(next);
+    setToastMessage("履歴に追加しました");
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+    setTimeout(() => historySectionRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [percent, totalNum, targetNum, isInverted, historyLimit, history]);
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -387,6 +395,8 @@ export default function Home() {
     setIsInverted(false);
   }, []);
 
+  const compareListSectionRef = useRef<HTMLElement>(null);
+
   const addToCompareList = useCallback(() => {
     if (!discountResult || unitPriceNum <= 0) return;
     const item: CompareItem = {
@@ -398,8 +408,14 @@ export default function Home() {
       discountRate: discountResult.discountRate,
       createdAt: Date.now(),
     };
-    setCompareList((prev) => [item, ...prev].slice(0, compareLimit));
-  }, [discountResult, unitPriceNum, compareQuantity, compareLimit]);
+    const next = [item, ...compareList].slice(0, compareLimit);
+    setCompareList(next);
+    saveCompareList(next);
+    setToastMessage("リストに追加しました");
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+    setTimeout(() => compareListSectionRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [discountResult, unitPriceNum, compareQuantity, compareLimit, compareList]);
 
   const removeFromCompareList = (id: string) => {
     setCompareList((prev) => prev.filter((c) => c.id !== id));
@@ -420,6 +436,8 @@ export default function Home() {
     setHistory((prev) => prev.filter((h) => h.id !== id));
   };
 
+  const discountHistorySectionRef = useRef<HTMLElement>(null);
+
   const addToDiscountHistory = useCallback(() => {
     if (originalPriceNum <= 0 || (discountRateNum <= 0 && salePriceNum <= 0)) return;
     const item: DiscountHistoryItem = {
@@ -430,8 +448,14 @@ export default function Home() {
       priceAfterDiscount,
       createdAt: Date.now(),
     };
-    setDiscountHistory((prev) => [item, ...prev].slice(0, discountLimit));
-  }, [originalPriceNum, discountRateNum, salePriceNum, discountAmount, priceAfterDiscount, discountLimit]);
+    const next = [item, ...discountHistory].slice(0, discountLimit);
+    setDiscountHistory(next);
+    saveDiscountHistory(next);
+    setToastMessage("履歴に追加しました");
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+    setTimeout(() => discountHistorySectionRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [originalPriceNum, discountRateNum, salePriceNum, discountAmount, priceAfterDiscount, discountLimit, discountHistory]);
 
   const removeFromDiscountHistory = (id: string) => {
     setDiscountHistory((prev) => prev.filter((h) => h.id !== id));
@@ -701,7 +725,7 @@ export default function Home() {
 
         {/* History list */}
         {history.length > 0 && (
-          <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
+          <section ref={historySectionRef} className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
             <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
               <h2 className="text-xs sm:text-sm font-semibold text-label">履歴</h2>
               {isPremium && (
@@ -851,7 +875,7 @@ export default function Home() {
         )}
 
         {discountHistory.length > 0 && (
-          <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
+          <section ref={discountHistorySectionRef} className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
             <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
               <h2 className="text-xs sm:text-sm font-semibold text-label">履歴</h2>
               {isPremium && (
@@ -1007,7 +1031,7 @@ export default function Home() {
 
         {/* 比較リスト（プレイリスト風） */}
         {compareList.length > 0 && (
-          <section className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
+          <section ref={compareListSectionRef} className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
             <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
               <h2 className="text-xs sm:text-sm font-semibold text-label">比較リスト</h2>
               {isPremium && (
