@@ -687,7 +687,7 @@ export default function Home() {
               onClick={addToHistory}
               className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
             >
-              履歴に追加（式を表示）
+              履歴に追加
             </button>
           )}
 
@@ -838,7 +838,7 @@ export default function Home() {
             onClick={addToDiscountHistory}
             className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
           >
-            履歴に追加（式を表示）
+            履歴に追加
           </button>
         )}
 
@@ -993,7 +993,7 @@ export default function Home() {
             onClick={addToCompareList}
             className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
           >
-            リストに追加（式を表示）
+            リストに追加
           </button>
         )}
 
