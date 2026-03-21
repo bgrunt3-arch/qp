@@ -230,6 +230,13 @@ export default function Home() {
 
   useEffect(() => setMounted(true), []);
 
+  // 決済画面から戻ったとき（bfcache復元時など）にローディングを解除
+  useEffect(() => {
+    const onPageShow = () => setCheckoutLoading(false);
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   useEffect(() => {
     fetch("/api/payment-config")
       .then((r) => r.json())
