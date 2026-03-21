@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { AdSenseScript } from "@/components/AdSenseScript";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -76,14 +77,9 @@ export default function RootLayout({
         <link rel="icon" href="/icon.png" sizes="512x512" type="image/png" />
         <link rel="apple-touch-icon" href="/icon.png" sizes="512x512" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        {/* AdSense: head内に直接配置（クローラー検証用） */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6880608133692345"
-          crossOrigin="anonymous"
-        />
       </head>
       <body className="min-h-full flex flex-col">
+        <AdSenseScript />
         <ThemeProvider>
           <ServiceWorkerRegister />
           {children}

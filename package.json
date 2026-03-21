@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@paypayopa/paypayopa-sdk-node": "^2.1.0",
     "lucide-react": "^0.577.0",
     "next": "16.2.0",
     "next-themes": "^0.4.6",

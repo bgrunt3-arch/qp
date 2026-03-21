@@ -8,10 +8,14 @@ export async function GET() {
     process.env.SQUARE_LOCATION_ID ||
     process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
   const squareEnabled = Boolean(accessToken && locationId);
+  const paypayEnabled = Boolean(
+    process.env.PAYPAY_API_KEY && process.env.PAYPAY_API_SECRET
+  );
   const premiumPurchaseUrl = process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL || null;
 
   return NextResponse.json({
     squareEnabled,
+    paypayEnabled,
     premiumPurchaseUrl,
   });
 }

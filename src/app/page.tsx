@@ -221,9 +221,11 @@ export default function Home() {
 
   const [paymentConfig, setPaymentConfig] = useState<{
     squareEnabled: boolean;
+    paypayEnabled: boolean;
     premiumPurchaseUrl: string | null;
   } | null>(null);
   const useSquareCheckout = paymentConfig?.squareEnabled ?? false;
+  const usePayPayCheckout = paymentConfig?.paypayEnabled ?? false;
   const premiumPurchaseUrl = paymentConfig?.premiumPurchaseUrl ?? process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL ?? "";
 
   useEffect(() => setMounted(true), []);
@@ -231,13 +233,14 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/payment-config")
       .then((r) => r.json())
-      .then((data: { squareEnabled?: boolean; premiumPurchaseUrl?: string | null }) =>
+      .then((data: { squareEnabled?: boolean; paypayEnabled?: boolean; premiumPurchaseUrl?: string | null }) =>
         setPaymentConfig({
           squareEnabled: Boolean(data.squareEnabled),
+          paypayEnabled: Boolean(data.paypayEnabled),
           premiumPurchaseUrl: data.premiumPurchaseUrl ?? null,
         })
       )
-      .catch(() => setPaymentConfig({ squareEnabled: false, premiumPurchaseUrl: null }));
+      .catch(() => setPaymentConfig({ squareEnabled: false, paypayEnabled: false, premiumPurchaseUrl: null }));
   }, []);
 
   // Square決済成功時のコールバック
@@ -253,6 +256,43 @@ export default function Home() {
       setTimeout(() => setToastMessage("コピーしました"), 2500);
       window.history.replaceState({}, "", window.location.pathname);
     }
+  }, [premiumMounted, setPremium]);
+
+  // PayPay決済完了の確認（リダイレクト戻り時にポーリング）
+  useEffect(() => {
+    if (typeof window === "undefined" || !premiumMounted) return;
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get("checkout");
+    const merchantPaymentId = params.get("merchantPaymentId");
+    if (checkout !== "paypay" || !merchantPaymentId) return;
+
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `/api/checkout-paypay/verify?merchantPaymentId=${encodeURIComponent(merchantPaymentId)}`
+        );
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.completed) {
+          setPremium(true);
+          setPremiumModalOpen(false);
+          setToastMessage("Premiumを購入しました");
+          setToastVisible(true);
+          setTimeout(() => setToastVisible(false), 2500);
+          setTimeout(() => setToastMessage("コピーしました"), 2500);
+          window.history.replaceState({}, "", window.location.pathname);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      if (!cancelled) setTimeout(poll, 2500);
+    };
+    poll();
+    return () => {
+      cancelled = true;
+    };
   }, [premiumMounted, setPremium]);
 
   const unitPriceNum = parseFloat(unitPrice) || 0;
@@ -552,6 +592,31 @@ export default function Home() {
     }
   };
 
+  const handlePayPayCheckout = async () => {
+    setCheckoutLoading(true);
+    let redirecting = false;
+    try {
+      const res = await fetch("/api/checkout-paypay", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `PayPay failed (${res.status})`);
+      if (data.url) {
+        redirecting = true;
+        window.location.href = data.url;
+        return;
+      }
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "エラーが発生しました";
+      setToastMessage(msg);
+      setToastVisible(true);
+      setTimeout(() => setToastVisible(false), 4000);
+    } finally {
+      if (!redirecting) setCheckoutLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-dvh sm:min-h-screen h-dvh sm:h-auto bg-page text-foreground flex flex-col overflow-hidden sm:overflow-visible">
       {/* Toast */}
@@ -595,13 +660,13 @@ export default function Home() {
         <p className="text-[10px] sm:text-xs text-muted mt-1 sm:mt-2 opacity-80">Esc: クリア</p>
       </header>
 
-      {premiumMounted && !isPremium && (
-        <aside aria-label="広告" className="shrink-0 px-3 sm:px-4 py-3 sm:py-4 isolate border-b border-page bg-subtle/30">
-          <AdBanner format="auto" className="max-w-md mx-auto" />
-        </aside>
-      )}
-
-      <main className="flex-1 min-h-0 max-w-md mx-auto w-full px-3 sm:px-4 py-3 sm:py-6 flex flex-col gap-3 sm:gap-6 overflow-y-auto overflow-x-hidden sm:overflow-visible relative z-10">
+      <main className="flex-1 min-h-0 max-w-md mx-auto w-full px-3 sm:px-4 py-3 sm:py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col gap-3 sm:gap-6 overflow-y-auto overflow-x-hidden sm:overflow-visible relative z-10">
+        {/* 上部広告もスクロール内に配置（履歴が隠れないように） */}
+        {premiumMounted && !isPremium && (
+          <aside aria-label="広告" className="shrink-0 py-2 isolate border-b border-page bg-subtle/30">
+            <AdBanner format="auto" className="max-w-md mx-auto" />
+          </aside>
+        )}
         {/* Intro */}
         <p className="shrink-0 text-xs sm:text-sm text-muted">
           達成率・割引・セット割をすぐ計算。<Link href="/about" className="text-accent hover:underline">使い方</Link>や<Link href="/tips" className="text-accent hover:underline">計算のコツ</Link>もご覧ください。
@@ -730,8 +795,8 @@ export default function Home() {
 
         {/* History list */}
         {history.length > 0 && (
-          <section ref={historySectionRef} className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
-            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
+          <section ref={historySectionRef} className="shrink-0 pt-3 sm:pt-6 border-t border-page">
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4">
               <h2 className="text-xs sm:text-sm font-semibold text-label">履歴</h2>
               {isPremium && (
                 <button
@@ -744,7 +809,7 @@ export default function Home() {
                 </button>
               )}
             </div>
-            <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
+            <ul className="space-y-1.5 sm:space-y-2 -mr-1 pr-1">
               {history.map((item) => (
                 <li
                   key={item.id}
@@ -880,8 +945,8 @@ export default function Home() {
         )}
 
         {discountHistory.length > 0 && (
-          <section ref={discountHistorySectionRef} className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
-            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
+          <section ref={discountHistorySectionRef} className="shrink-0 pt-3 sm:pt-6 border-t border-page">
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4">
               <h2 className="text-xs sm:text-sm font-semibold text-label">履歴</h2>
               {isPremium && (
                 <button
@@ -894,7 +959,7 @@ export default function Home() {
                 </button>
               )}
             </div>
-            <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
+            <ul className="space-y-1.5 sm:space-y-2 -mr-1 pr-1">
               {discountHistory.map((item) => (
                 <li
                   key={item.id}
@@ -1036,8 +1101,8 @@ export default function Home() {
 
         {/* 比較リスト（プレイリスト風） */}
         {compareList.length > 0 && (
-          <section ref={compareListSectionRef} className="shrink min-h-0 flex flex-col pt-3 sm:pt-6 border-t border-page">
-            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4 shrink-0">
+          <section ref={compareListSectionRef} className="shrink-0 pt-3 sm:pt-6 border-t border-page">
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4">
               <h2 className="text-xs sm:text-sm font-semibold text-label">比較リスト</h2>
               {isPremium && (
                 <button
@@ -1050,7 +1115,7 @@ export default function Home() {
                 </button>
               )}
             </div>
-            <ul className="space-y-1.5 sm:space-y-2 min-h-0 overflow-y-auto -mr-1 pr-1">
+            <ul className="space-y-1.5 sm:space-y-2 -mr-1 pr-1">
               {compareList.map((item) => (
                 <li
                   key={item.id}
@@ -1174,14 +1239,27 @@ export default function Home() {
               >
                 読み込み中...
               </button>
-            ) : useSquareCheckout ? (
-              <button
-                onClick={handleSquareCheckout}
-                disabled={checkoutLoading}
-                className="w-full py-3 rounded-xl font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {checkoutLoading ? "決済画面へ移動中..." : "プレミアムプランを試す"}
-              </button>
+            ) : useSquareCheckout || usePayPayCheckout ? (
+              <div className="space-y-2">
+                {useSquareCheckout && (
+                  <button
+                    onClick={handleSquareCheckout}
+                    disabled={checkoutLoading}
+                    className="w-full py-3 rounded-xl font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {checkoutLoading ? "決済画面へ移動中..." : "カードで購入（Square）"}
+                  </button>
+                )}
+                {usePayPayCheckout && (
+                  <button
+                    onClick={handlePayPayCheckout}
+                    disabled={checkoutLoading}
+                    className="w-full py-3 rounded-xl font-semibold bg-[#00b900] text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {checkoutLoading ? "決済画面へ移動中..." : "PayPayで購入"}
+                  </button>
+                )}
+              </div>
             ) : premiumPurchaseUrl ? (
               <a
                 href={premiumPurchaseUrl}
