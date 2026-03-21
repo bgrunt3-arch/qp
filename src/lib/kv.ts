@@ -3,6 +3,7 @@ import { Redis } from "@upstash/redis";
 const PREFIX = "qp:";
 const LICENSE_PREFIX = `${PREFIX}license:`;
 const PAYMENT_PREFIX = `${PREFIX}payment:`;
+const EMAIL_PREFIX = `${PREFIX}email:`;
 
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -44,6 +45,25 @@ export async function getLicenseByPayment(
   const redis = getRedis();
   if (!redis) return null;
   return redis.get<string>(`${PAYMENT_PREFIX}${source}:${paymentId}`);
+}
+
+/** メールアドレスとライセンスキーを紐付け（Square購入者向け・7日間有効） */
+export async function saveLicenseByEmail(
+  email: string,
+  licenseKey: string
+): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return false;
+  const key = `${EMAIL_PREFIX}${email.trim().toLowerCase()}`;
+  await redis.set(key, licenseKey, { ex: 60 * 60 * 24 * 7 }); // 7日
+  return true;
+}
+
+/** メールアドレスでライセンスキーを取得 */
+export async function getLicenseByEmail(email: string): Promise<string | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  return redis.get<string>(`${EMAIL_PREFIX}${email.trim().toLowerCase()}`);
 }
 
 /** ライセンスキーを検証 */

@@ -259,6 +259,10 @@ export default function Home() {
   const [licenseKeyInput, setLicenseKeyInput] = useState("");
   const [licenseVerifyLoading, setLicenseVerifyLoading] = useState(false);
   const [licenseVerifyError, setLicenseVerifyError] = useState<string | null>(null);
+  const [claimEmail, setClaimEmail] = useState("");
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [claimedKey, setClaimedKey] = useState<string | null>(null);
   const { setTheme, resolvedTheme } = useTheme();
   const { isPremium, setPremium, mounted: premiumMounted } = usePremium();
   const { accentColor, setAccentColor, accentColors } = useAccentColor(isPremium);
@@ -1686,6 +1690,87 @@ export default function Home() {
               </div>
               {licenseVerifyError && (
                 <p className="text-xs text-accent mt-1">{licenseVerifyError}</p>
+              )}
+            </div>
+            <div className="border-t border-page pt-4 mt-4">
+              <p className="text-xs font-medium text-label mb-2">Squareで購入したがメールが届かない場合</p>
+              <p className="text-xs text-muted mb-2">決済時に使用したメールアドレスを入力してライセンスキーを取得できます。</p>
+              {claimedKey ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-[#22c55e]">ライセンスキー: {claimedKey}</p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(claimedKey);
+                      setToastMessage("コピーしました");
+                      setToastVisible(true);
+                      setTimeout(() => setToastVisible(false), 2000);
+                    }}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    コピー
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPremium(true);
+                      setClaimedKey(null);
+                      setClaimEmail("");
+                      setPremiumModalOpen(false);
+                      setToastMessage("Premiumを有効にしました");
+                      setToastVisible(true);
+                      setTimeout(() => setToastVisible(false), 2500);
+                    }}
+                    className="block w-full py-2 text-sm font-medium rounded-lg bg-accent text-white"
+                  >
+                    このキーで有効化
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="your@email.com"
+                    value={claimEmail}
+                    onChange={(e) => {
+                      setClaimEmail(e.target.value);
+                      setClaimError(null);
+                    }}
+                    className="flex-1 px-3 py-2 text-sm rounded-lg bg-input border border-input text-input-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
+                  />
+                  <button
+                    onClick={async () => {
+                      const email = claimEmail.trim();
+                      if (!email) return;
+                      setClaimLoading(true);
+                      setClaimError(null);
+                      try {
+                        const res = await fetch("/api/claim-license", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ email }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.licenseKey) {
+                          setClaimedKey(data.licenseKey);
+                          setClaimError(null);
+                        } else {
+                          setClaimError(data.error ?? data.hint ?? "取得できませんでした");
+                        }
+                      } catch {
+                        setClaimError("エラーが発生しました");
+                      } finally {
+                        setClaimLoading(false);
+                      }
+                    }}
+                    disabled={!claimEmail.trim() || claimLoading}
+                    className="px-4 py-2 text-sm font-medium rounded-lg bg-accent text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  >
+                    {claimLoading ? "取得中..." : "取得"}
+                  </button>
+                </div>
+              )}
+              {claimError && (
+                <p className="text-xs text-accent mt-1">{claimError}</p>
               )}
             </div>
             <p className="text-xs font-medium text-label mt-4 mb-2">購入する</p>

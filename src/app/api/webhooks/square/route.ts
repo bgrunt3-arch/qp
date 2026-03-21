@@ -1,7 +1,7 @@
 import { WebhooksHelper } from "square";
 import { NextRequest, NextResponse } from "next/server";
 import { generateLicenseKey } from "@/lib/license";
-import { saveLicense, getLicenseByPayment, isKvConfigured } from "@/lib/kv";
+import { saveLicense, saveLicenseByEmail, getLicenseByPayment, isKvConfigured } from "@/lib/kv";
 import { sendLicenseKeyEmail, isEmailConfigured } from "@/lib/email";
 
 const PREMIUM_AMOUNT_JPY = 100;
@@ -91,8 +91,11 @@ export async function POST(req: NextRequest) {
   const buyerEmail =
     payment.buyer_email_address ?? payment.buyerEmailAddress ?? "";
   const email = buyerEmail.trim();
-  if (email && isEmailConfigured()) {
-    await sendLicenseKeyEmail(email, licenseKey);
+  if (email) {
+    await saveLicenseByEmail(email, licenseKey);
+    if (isEmailConfigured()) {
+      await sendLicenseKeyEmail(email, licenseKey);
+    }
   }
 
   return NextResponse.json({ received: true });
