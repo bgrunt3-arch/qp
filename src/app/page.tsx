@@ -1087,16 +1087,14 @@ export default function Home() {
         )}
           </>
         )}
-      </main>
-
-      {premiumMounted && !isPremium && (
-        <aside aria-label="広告" className="shrink-0 px-3 sm:px-4 py-4 sm:py-5 border-t border-page isolate bg-subtle/30">
-          <AdBanner format="auto" className="max-w-md mx-auto" />
-        </aside>
-      )}
-
-      <footer className="shrink-0 px-3 sm:px-4 py-4 border-t border-page">
-        <div className="max-w-md mx-auto flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
+        {/* 広告・フッターをスクロール内に配置（モバイルで履歴と被らない） */}
+        {premiumMounted && !isPremium && (
+          <aside aria-label="広告" className="shrink-0 px-3 sm:px-4 py-4 sm:py-5 border-t border-page isolate bg-subtle/30 mt-4">
+            <AdBanner format="auto" className="max-w-md mx-auto" />
+          </aside>
+        )}
+        <footer className="shrink-0 px-3 sm:px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-page mt-4">
+          <div className="max-w-md mx-auto flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
           <a href="/about" className="hover:text-accent">アプリの説明</a>
           <a href="/tips" className="hover:text-accent">計算のコツ</a>
           <a href="/faq" className="hover:text-accent">よくある質問</a>
@@ -1104,8 +1102,9 @@ export default function Home() {
           <a href="/terms" className="hover:text-accent">利用規約</a>
           <a href="/tokushoho" className="hover:text-accent">特定商取引法に基づく表記</a>
           <a href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL || "support@qp-lime.vercel.app"}`} className="hover:text-accent">お問い合わせ</a>
-        </div>
-      </footer>
+          </div>
+        </footer>
+      </main>
 
       {premiumModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setPremiumModalOpen(false)}>
