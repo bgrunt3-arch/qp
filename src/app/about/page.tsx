@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Percent, Tag, ArrowUpDown } from "lucide-react";
+import { Percent, Tag, ArrowUpDown, Store } from "lucide-react";
 
 export const metadata = {
   title: "アプリの説明・使い方",
@@ -20,7 +20,7 @@ export default function AboutPage() {
         <section className="space-y-4 text-sm mb-8">
           <h2 className="text-lg font-semibold">QuickPercentとは</h2>
           <p>
-            QuickPercentは、割合・セット割・割引の計算を素早く行えるWebアプリです。達成率や進捗、買い物時の価格比較など、日常でよく使う計算をブラウザで即座に算出できます。
+            QuickPercentは、割合・セット割・割引・フリマ純利益の計算を素早く行えるWebアプリです。達成率や進捗、買い物時の価格比較、メルカリ・ラクマなどの出品時の純利益など、日常でよく使う計算をブラウザで即座に算出できます。
           </p>
         </section>
 
@@ -67,6 +67,22 @@ export default function AboutPage() {
             <li><strong>セール価格</strong>：割引後の価格（割引率の代わりに入力可）</li>
           </ul>
           <p>割引率とセール価格のどちらか一方を入力すれば、もう一方は自動計算されます。「履歴に追加」で保存（無料50件、Premium 200件）。</p>
+        </section>
+
+        <section className="space-y-4 text-sm mb-8">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Store size={18} />
+            フリマモード
+          </h2>
+          <p>メルカリ・ラクマ・Yahoo!フリマなどのフリマアプリで出品したときの純利益を計算します。</p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>売値</strong>：商品の販売価格（円）</li>
+            <li><strong>販売手数料率</strong>：プラットフォームの手数料（例：メルカリ10%）</li>
+            <li><strong>振込手数料</strong>：銀行振込時の手数料（例：メルカリ200円）</li>
+            <li><strong>送料</strong>：出品者負担の送料（0の場合は省略可）</li>
+            <li><strong>原価</strong>：仕入れ価格（純利益の計算に使用、0の場合は入金予定額を表示）</li>
+          </ul>
+          <p>「メルカリ」「ラクマ」ボタンで手数料を一括入力できます。「履歴に追加」で保存（無料50件、Premium 200件）。</p>
         </section>
 
         <section className="space-y-4 text-sm mb-8">

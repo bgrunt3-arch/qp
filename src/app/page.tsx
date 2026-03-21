@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown, Crown, X, Download } from "lucide-react";
+import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown, Crown, X, Download, Store } from "lucide-react";
 import { AdBanner } from "@/components/AdBanner";
 import { usePremium } from "@/hooks/usePremium";
 import { useAccentColor } from "@/hooks/useAccentColor";
@@ -11,6 +11,7 @@ import { useAccentColor } from "@/hooks/useAccentColor";
 const STORAGE_KEY = "percent-quick-history";
 const COMPARE_STORAGE_KEY = "percent-quick-compare";
 const DISCOUNT_STORAGE_KEY = "percent-quick-discount-history";
+const FLEA_STORAGE_KEY = "percent-quick-flea-history";
 const APP_NAME = "QuickPercent";
 
 const HISTORY_LIMIT_FREE = 50;
@@ -19,8 +20,10 @@ const COMPARE_LIMIT_FREE = 50;
 const COMPARE_LIMIT_PREMIUM = 100;
 const DISCOUNT_LIMIT_FREE = 50;
 const DISCOUNT_LIMIT_PREMIUM = 200;
+const FLEA_LIMIT_FREE = 50;
+const FLEA_LIMIT_PREMIUM = 200;
 
-type AppMode = "percent" | "compare" | "discount";
+type AppMode = "percent" | "compare" | "discount" | "flea";
 
 type HistoryItem = {
   id: string;
@@ -48,6 +51,18 @@ type DiscountHistoryItem = {
   discountRate: number;
   discountAmount: number;
   priceAfterDiscount: number;
+  createdAt: number;
+};
+
+type FleaHistoryItem = {
+  id: string;
+  salePrice: number;
+  commissionRate: number;
+  transferFee: number;
+  shippingCost: number;
+  cost: number;
+  commissionAmount: number;
+  netProfit: number;
   createdAt: number;
 };
 
@@ -159,6 +174,25 @@ function saveCompareList(items: CompareItem[]): void {
   });
 }
 
+function loadFleaHistory(): FleaHistoryItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(FLEA_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as FleaHistoryItem[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFleaHistory(items: FleaHistoryItem[]): void {
+  if (typeof window === "undefined") return;
+  scheduleStorageWrite(() => {
+    localStorage.setItem(FLEA_STORAGE_KEY, JSON.stringify(items));
+  });
+}
+
 function calcDiscount(unitPrice: number, quantity: number, actualPrice: number) {
   const totalNormalPrice = unitPrice * quantity;
   if (totalNormalPrice <= 0 || !Number.isFinite(totalNormalPrice)) return null;
@@ -206,8 +240,14 @@ export default function Home() {
   const [salePrice, setSalePrice] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [secondBagUnitPrice, setSecondBagUnitPrice] = useState<string>("");
+  const [fleaSalePrice, setFleaSalePrice] = useState<string>("");
+  const [fleaCommissionRate, setFleaCommissionRate] = useState<string>("10");
+  const [fleaTransferFee, setFleaTransferFee] = useState<string>("200");
+  const [fleaShipping, setFleaShipping] = useState<string>("");
+  const [fleaCost, setFleaCost] = useState<string>("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [discountHistory, setDiscountHistory] = useState<DiscountHistoryItem[]>([]);
+  const [fleaHistory, setFleaHistory] = useState<FleaHistoryItem[]>([]);
   const [compareList, setCompareList] = useState<CompareItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
@@ -342,6 +382,24 @@ export default function Home() {
         ) / 100
       : 0;
 
+  const fleaSalePriceNum = parseFloat(fleaSalePrice) || 0;
+  const fleaCommissionRateNum = Math.min(100, Math.max(0, parseFloat(fleaCommissionRate) || 0));
+  const fleaTransferFeeNum = Math.max(0, parseFloat(fleaTransferFee) || 0);
+  const fleaShippingNum = Math.max(0, parseFloat(fleaShipping) || 0);
+  const fleaCostNum = Math.max(0, parseFloat(fleaCost) || 0);
+  const fleaCommissionAmount =
+    fleaSalePriceNum > 0
+      ? Math.round(fleaSalePriceNum * (fleaCommissionRateNum / 100))
+      : 0;
+  const fleaPayoutAmount =
+    fleaSalePriceNum > 0
+      ? Math.round((fleaSalePriceNum - fleaCommissionAmount - fleaTransferFeeNum - fleaShippingNum) * 100) / 100
+      : 0;
+  const fleaNetProfit =
+    fleaSalePriceNum > 0
+      ? Math.round((fleaPayoutAmount - fleaCostNum) * 100) / 100
+      : 0;
+
   const percent = calcPercent(totalNum, targetNum);
   const displayValue = percent ?? 0;
   const displayTarget = isInverted ? 100 - displayValue : displayValue;
@@ -350,6 +408,7 @@ export default function Home() {
   const historyLimit = isPremium ? HISTORY_LIMIT_PREMIUM : HISTORY_LIMIT_FREE;
   const compareLimit = isPremium ? COMPARE_LIMIT_PREMIUM : COMPARE_LIMIT_FREE;
   const discountLimit = isPremium ? DISCOUNT_LIMIT_PREMIUM : DISCOUNT_LIMIT_FREE;
+  const fleaLimit = isPremium ? FLEA_LIMIT_PREMIUM : FLEA_LIMIT_FREE;
 
   const historySectionRef = useRef<HTMLElement>(null);
 
@@ -375,6 +434,7 @@ export default function Home() {
   useEffect(() => {
     setHistory(loadHistory());
     setDiscountHistory(loadDiscountHistory());
+    setFleaHistory(loadFleaHistory());
     setCompareList(loadCompareList());
   }, []);
 
@@ -390,7 +450,25 @@ export default function Home() {
     saveCompareList(compareList);
   }, [compareList]);
 
+  useEffect(() => {
+    saveFleaHistory(fleaHistory);
+  }, [fleaHistory]);
+
   const handleCopy = useCallback(async () => {
+    if (appMode === "flea") {
+      if (fleaSalePriceNum <= 0) return;
+      const text = `売値${formatYen(fleaSalePriceNum)} → 純利益${formatYen(fleaNetProfit)}（手数料${formatYen(fleaCommissionAmount)}、振込${formatYen(fleaTransferFeeNum)}）`;
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setToastVisible(true);
+        setTimeout(() => setCopied(false), 1500);
+        setTimeout(() => setToastVisible(false), 2500);
+      } catch {
+        // fallback
+      }
+      return;
+    }
     if (appMode === "compare") {
       if (!discountResult) return;
       const text = `${formatYen(discountResult.savingAmount)} (${discountResult.discountRate.toFixed(1)}%) 安く購入できます`;
@@ -430,7 +508,7 @@ export default function Home() {
     } catch {
       // fallback
     }
-  }, [appMode, percent, discountResult, originalPriceNum, priceAfterDiscount, discountAmount]);
+  }, [appMode, percent, discountResult, originalPriceNum, priceAfterDiscount, discountAmount, fleaSalePriceNum, fleaNetProfit, fleaCommissionAmount, fleaTransferFeeNum]);
 
   const handleClear = useCallback(() => {
     setTotal("");
@@ -440,6 +518,11 @@ export default function Home() {
     setSalePrice("");
     setUnitPrice("");
     setSecondBagUnitPrice("");
+    setFleaSalePrice("");
+    setFleaCommissionRate("10");
+    setFleaTransferFee("200");
+    setFleaShipping("");
+    setFleaCost("");
     setIsInverted(false);
   }, []);
 
@@ -509,6 +592,44 @@ export default function Home() {
     setDiscountHistory((prev) => prev.filter((h) => h.id !== id));
   };
 
+  const fleaHistorySectionRef = useRef<HTMLElement>(null);
+
+  const addToFleaHistory = useCallback(() => {
+    if (fleaSalePriceNum <= 0) return;
+    const item: FleaHistoryItem = {
+      id: crypto.randomUUID(),
+      salePrice: fleaSalePriceNum,
+      commissionRate: fleaCommissionRateNum,
+      transferFee: fleaTransferFeeNum,
+      shippingCost: fleaShippingNum,
+      cost: fleaCostNum,
+      commissionAmount: fleaCommissionAmount,
+      netProfit: fleaNetProfit,
+      createdAt: Date.now(),
+    };
+    const next = [item, ...fleaHistory].slice(0, fleaLimit);
+    setFleaHistory(next);
+    saveFleaHistory(next);
+    setToastMessage("履歴に追加しました");
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+    setTimeout(() => fleaHistorySectionRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [
+    fleaSalePriceNum,
+    fleaCommissionRateNum,
+    fleaTransferFeeNum,
+    fleaShippingNum,
+    fleaCostNum,
+    fleaCommissionAmount,
+    fleaNetProfit,
+    fleaLimit,
+    fleaHistory,
+  ]);
+
+  const removeFromFleaHistory = (id: string) => {
+    setFleaHistory((prev) => prev.filter((h) => h.id !== id));
+  };
+
   const shareDiscountHistoryItem = async (item: DiscountHistoryItem) => {
     const text =
       item.discountAmount >= 0
@@ -571,6 +692,18 @@ export default function Home() {
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 2000);
   }, [discountHistory]);
+
+  const exportFleaHistory = useCallback(() => {
+    const header = "売値,手数料率(%),振込手数料,送料,原価,販売手数料,純利益,日時\n";
+    const rows = fleaHistory.map(
+      (item) =>
+        `${item.salePrice},${item.commissionRate},${item.transferFee},${item.shippingCost},${item.cost},${item.commissionAmount},${item.netProfit},${new Date(item.createdAt).toLocaleString("ja-JP")}`
+    );
+    downloadCSV(header + rows.join("\n"), `qp-フリマ履歴-${new Date().toISOString().slice(0, 10)}.csv`);
+    setToastMessage("フリマ履歴をエクスポートしました");
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+  }, [fleaHistory]);
 
   const progressValue = percent !== null ? Math.min(100, Math.max(0, percent)) : 0;
 
@@ -676,10 +809,10 @@ export default function Home() {
         )}
         {/* Intro */}
         <p className="shrink-0 text-xs sm:text-sm text-muted">
-          達成率・割引・セット割をすぐ計算。<Link href="/about" className="text-accent hover:underline">使い方</Link>や<Link href="/tips" className="text-accent hover:underline">計算のコツ</Link>もご覧ください。
+          達成率・割引・セット割・フリマ純利益をすぐ計算。<Link href="/about" className="text-accent hover:underline">使い方</Link>や<Link href="/tips" className="text-accent hover:underline">計算のコツ</Link>もご覧ください。
         </p>
-        {/* App mode toggle: 割合 / セット割 / 割引 */}
-        <div className="shrink-0 flex rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
+        {/* App mode toggle: 割合 / セット割 / 割引 / フリマ */}
+        <div className="shrink-0 flex flex-wrap rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
           <button
             onClick={() => setAppMode("percent")}
             className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
@@ -705,6 +838,15 @@ export default function Home() {
           >
             <Tag size={14} className="sm:w-4 sm:h-4" />
             割引
+          </button>
+          <button
+            onClick={() => setAppMode("flea")}
+            className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              appMode === "flea" ? "bg-accent text-white shadow-md shadow-[#ff6b6b]/30" : "text-muted hover:text-accent hover:bg-subtle"
+            }`}
+          >
+            <Store size={14} className="sm:w-4 sm:h-4" />
+            フリマ
           </button>
         </div>
 
@@ -1009,6 +1151,217 @@ export default function Home() {
                     </button>
                     <button
                       onClick={() => removeFromDiscountHistory(item.id)}
+                      className="p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                      aria-label="削除"
+                    >
+                      <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+          </>
+        ) : appMode === "flea" ? (
+          <>
+        <div className="shrink-0 flex flex-wrap gap-2 mb-2">
+          <button
+            onClick={() => {
+              setFleaCommissionRate("10");
+              setFleaTransferFee("200");
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-subtle text-muted hover:text-accent"
+          >
+            メルカリ
+          </button>
+          <button
+            onClick={() => {
+              setFleaCommissionRate("10");
+              setFleaTransferFee("210");
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-subtle text-muted hover:text-accent"
+          >
+            ラクマ
+          </button>
+          <button
+            onClick={() => {
+              setFleaCommissionRate("5");
+              setFleaTransferFee("100");
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-subtle text-muted hover:text-accent"
+          >
+            Yahoo!フリマ
+          </button>
+        </div>
+        <div className="shrink-0 space-y-2 sm:space-y-4">
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">売値（円）</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0"
+              value={fleaSalePrice}
+              onChange={(e) => setFleaSalePrice(sanitizeNumericInput(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
+            <label className="block">
+              <span className="text-xs sm:text-sm font-medium text-label">販売手数料率（%）</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="10"
+                value={fleaCommissionRate}
+                onChange={(e) => setFleaCommissionRate(sanitizeNumericInput(e.target.value))}
+                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs sm:text-sm font-medium text-label">振込手数料（円）</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="200"
+                value={fleaTransferFee}
+                onChange={(e) => setFleaTransferFee(sanitizeNumericInput(e.target.value))}
+                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
+            <label className="block">
+              <span className="text-xs sm:text-sm font-medium text-label">送料（出品者負担・円）</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="0"
+                value={fleaShipping}
+                onChange={(e) => setFleaShipping(sanitizeNumericInput(e.target.value))}
+                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs sm:text-sm font-medium text-label">原価（円）</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="0"
+                value={fleaCost}
+                onChange={(e) => setFleaCost(sanitizeNumericInput(e.target.value))}
+                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="shrink-0 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm overflow-hidden">
+          {fleaSalePriceNum > 0 ? (
+            <ul className="divide-y divide-[var(--border)]">
+              <li className="flex justify-between items-center gap-3 py-3 px-4">
+                <span className="text-sm text-muted">販売手数料</span>
+                <span className="text-base font-semibold text-accent tabular-nums">
+                  -{formatYen(fleaCommissionAmount)}（{fleaCommissionRateNum}%）
+                </span>
+              </li>
+              <li className="flex justify-between items-center gap-3 py-3 px-4">
+                <span className="text-sm text-muted">振込手数料</span>
+                <span className="text-base font-semibold tabular-nums">-{formatYen(fleaTransferFeeNum)}</span>
+              </li>
+              {fleaShippingNum > 0 && (
+                <li className="flex justify-between items-center gap-3 py-3 px-4">
+                  <span className="text-sm text-muted">送料</span>
+                  <span className="text-base font-semibold tabular-nums">-{formatYen(fleaShippingNum)}</span>
+                </li>
+              )}
+              <li className="flex justify-between items-center gap-3 py-3 px-4">
+                <span className="text-sm text-muted">入金予定</span>
+                <span className="text-base font-semibold tabular-nums">{formatYen(fleaPayoutAmount)}</span>
+              </li>
+              <li className="flex justify-between items-center gap-3 py-3 px-4 bg-accent/5">
+                <span className="text-sm font-semibold text-label">純利益</span>
+                <span className={`text-lg font-bold tabular-nums ${fleaNetProfit >= 0 ? "text-[#22c55e]" : "text-accent"}`}>
+                  {formatYen(fleaNetProfit)}
+                </span>
+              </li>
+            </ul>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="text-result-empty text-lg">売値を入力してください</p>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => handleCopy()}
+          disabled={fleaSalePriceNum <= 0}
+          className="shrink-0 w-full h-11 sm:h-14 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-[#ff6b6b]/30"
+        >
+          <Copy size={18} className="sm:w-5 sm:h-5" />
+          結果をコピー
+        </button>
+
+        {fleaSalePriceNum > 0 && (
+          <button
+            onClick={addToFleaHistory}
+            className="shrink-0 w-full h-10 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border-2 border-dashed border-accent/40 text-accent hover:bg-subtle hover:border-accent transition-colors"
+          >
+            履歴に追加
+          </button>
+        )}
+
+        {fleaHistory.length > 0 && (
+          <section ref={fleaHistorySectionRef} className="shrink-0 pt-3 sm:pt-6 border-t border-page">
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4">
+              <h2 className="text-xs sm:text-sm font-semibold text-label">履歴</h2>
+              {isPremium && (
+                <button
+                  onClick={exportFleaHistory}
+                  className="p-1.5 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                  aria-label="エクスポート"
+                  title="CSVでダウンロード"
+                >
+                  <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+              )}
+            </div>
+            <ul className="space-y-1.5 sm:space-y-2 -mr-1 pr-1">
+              {fleaHistory.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-card border border-page shadow-sm hover:shadow-md transition-shadow shrink-0"
+                >
+                  <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden pr-1">
+                    <span className="text-xs sm:text-sm text-label block whitespace-nowrap">
+                      売値{formatYen(item.salePrice)} → 純利益{formatYen(item.netProfit)}
+                    </span>
+                    <span className="text-xs text-muted block">
+                      手数料{formatYen(item.commissionAmount)}・振込{formatYen(item.transferFee)}
+                      {item.cost > 0 ? `・原価${formatYen(item.cost)}` : ""}
+                    </span>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => {
+                        const t = `売値${formatYen(item.salePrice)} → 純利益${formatYen(item.netProfit)}`;
+                        navigator.clipboard.writeText(t);
+                        setToastVisible(true);
+                        setTimeout(() => setToastVisible(false), 2500);
+                      }}
+                      className="p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
+                      aria-label="共有"
+                    >
+                      <Share2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    </button>
+                    <button
+                      onClick={() => removeFromFleaHistory(item.id)}
                       className="p-1.5 sm:p-2 rounded-lg text-muted hover:text-accent hover:bg-subtle transition-colors"
                       aria-label="削除"
                     >

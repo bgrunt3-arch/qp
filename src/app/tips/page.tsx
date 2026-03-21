@@ -58,7 +58,7 @@ export default function TipsPage() {
         <section className="space-y-4 text-sm mb-8">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingBag size={18} />
-            割引・セット割の例
+            割引・セット割・フリマの例
           </h2>
           <h3 className="font-medium">割引計算</h3>
           <ul className="space-y-2 ml-2">
@@ -69,6 +69,11 @@ export default function TipsPage() {
           <ul className="space-y-2 ml-2">
             <li>1袋198円 vs 2袋目98円 → 2袋で296円、実質148円/袋（約25%お得）</li>
             <li>1本298円 vs 2本目半額 → 2本で447円、実質約224円/本（約25%お得）</li>
+          </ul>
+          <h3 className="font-medium mt-4">フリマ純利益</h3>
+          <ul className="space-y-2 ml-2">
+            <li>メルカリで1,000円出品 → 手数料10%で100円、振込200円 → 入金予定700円</li>
+            <li>原価300円なら純利益400円</li>
           </ul>
         </section>
 
