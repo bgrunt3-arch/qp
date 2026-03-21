@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown, Crown, X, Download } from "lucide-react";
 import { AdBanner } from "@/components/AdBanner";
@@ -595,12 +596,16 @@ export default function Home() {
       </header>
 
       {premiumMounted && !isPremium && (
-        <div className="shrink-0 px-3 sm:px-4 py-2 isolate">
+        <aside aria-label="広告" className="shrink-0 px-3 sm:px-4 py-3 sm:py-4 isolate border-b border-page bg-subtle/30">
           <AdBanner format="auto" className="max-w-md mx-auto" />
-        </div>
+        </aside>
       )}
 
       <main className="flex-1 min-h-0 max-w-md mx-auto w-full px-3 sm:px-4 py-3 sm:py-6 flex flex-col gap-3 sm:gap-6 overflow-y-auto overflow-x-hidden sm:overflow-visible relative z-10">
+        {/* Intro */}
+        <p className="shrink-0 text-xs sm:text-sm text-muted">
+          達成率・割引・セット割をすぐ計算。<Link href="/about" className="text-accent hover:underline">使い方</Link>や<Link href="/tips" className="text-accent hover:underline">計算のコツ</Link>もご覧ください。
+        </p>
         {/* App mode toggle: 割合 / セット割 / 割引 */}
         <div className="shrink-0 flex rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
           <button
@@ -1085,13 +1090,16 @@ export default function Home() {
       </main>
 
       {premiumMounted && !isPremium && (
-        <div className="shrink-0 px-3 sm:px-4 py-3 border-t border-page isolate">
+        <aside aria-label="広告" className="shrink-0 px-3 sm:px-4 py-4 sm:py-5 border-t border-page isolate bg-subtle/30">
           <AdBanner format="auto" className="max-w-md mx-auto" />
-        </div>
+        </aside>
       )}
 
       <footer className="shrink-0 px-3 sm:px-4 py-4 border-t border-page">
         <div className="max-w-md mx-auto flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
+          <a href="/about" className="hover:text-accent">アプリの説明</a>
+          <a href="/tips" className="hover:text-accent">計算のコツ</a>
+          <a href="/faq" className="hover:text-accent">よくある質問</a>
           <a href="/privacy" className="hover:text-accent">プライバシーポリシー</a>
           <a href="/terms" className="hover:text-accent">利用規約</a>
           <a href="/tokushoho" className="hover:text-accent">特定商取引法に基づく表記</a>
