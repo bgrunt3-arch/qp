@@ -29,7 +29,7 @@ export default function PrivacyPage() {
 
           <h2 className="text-lg font-semibold">2. 第三者サービス</h2>
           <p>
-            本サービスでは、広告表示（Google AdSense）および決済処理（Stripe）のため、第三者サービスを利用しています。これらのサービスはそれぞれのプライバシーポリシーに従ってデータを処理します。
+            本サービスでは、広告表示（Google AdSense）および決済処理（Square）のため、第三者サービスを利用しています。これらのサービスはそれぞれのプライバシーポリシーに従ってデータを処理します。
           </p>
 
           <h2 className="text-lg font-semibold">3. お問い合わせ</h2>

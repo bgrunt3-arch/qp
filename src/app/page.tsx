@@ -199,12 +199,11 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
 
   const premiumPurchaseUrl = process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL;
-  const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-  const useStripeCheckout = Boolean(stripePublishableKey);
+  const useSquareCheckout = Boolean(process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID);
 
   useEffect(() => setMounted(true), []);
 
-  // Stripe決済成功時のコールバック
+  // Square決済成功時のコールバック
   useEffect(() => {
     if (typeof window === "undefined" || !premiumMounted) return;
     const params = new URLSearchParams(window.location.search);
@@ -427,17 +426,21 @@ export default function Home() {
 
   const progressValue = percent !== null ? Math.min(100, Math.max(0, percent)) : 0;
 
-  const handleStripeCheckout = async () => {
+  const handleSquareCheckout = async () => {
     setCheckoutLoading(true);
     try {
       const res = await fetch("/api/checkout", { method: "POST" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Checkout failed");
+      if (!res.ok) throw new Error(data.error || `Checkout failed (${res.status})`);
       if (data.url) window.location.href = data.url;
     } catch (err) {
-      setToastMessage(err instanceof Error ? err.message : "エラーが発生しました");
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "エラーが発生しました";
+      setToastMessage(msg);
       setToastVisible(true);
-      setTimeout(() => setToastVisible(false), 3000);
+      setTimeout(() => setToastVisible(false), 4000);
     } finally {
       setCheckoutLoading(false);
     }
@@ -989,9 +992,9 @@ export default function Home() {
                   購入をやり直す（リセット）
                 </button>
               </div>
-            ) : useStripeCheckout ? (
+            ) : useSquareCheckout ? (
               <button
-                onClick={handleStripeCheckout}
+                onClick={handleSquareCheckout}
                 disabled={checkoutLoading}
                 className="w-full py-3 rounded-xl font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
               >
