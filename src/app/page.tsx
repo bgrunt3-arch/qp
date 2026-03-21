@@ -504,11 +504,16 @@ export default function Home() {
 
   const handleSquareCheckout = async () => {
     setCheckoutLoading(true);
+    let redirecting = false;
     try {
       const res = await fetch("/api/checkout", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Checkout failed (${res.status})`);
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        redirecting = true;
+        window.location.href = data.url;
+        return;
+      }
     } catch (err) {
       const msg =
         err instanceof Error
@@ -518,7 +523,7 @@ export default function Home() {
       setToastVisible(true);
       setTimeout(() => setToastVisible(false), 4000);
     } finally {
-      setCheckoutLoading(false);
+      if (!redirecting) setCheckoutLoading(false);
     }
   };
 
@@ -1136,7 +1141,7 @@ export default function Home() {
                 disabled={checkoutLoading}
                 className="w-full py-3 rounded-xl font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {checkoutLoading ? "処理中..." : "プレミアムプランを試す"}
+                {checkoutLoading ? "決済画面へ移動中..." : "プレミアムプランを試す"}
               </button>
             ) : premiumPurchaseUrl ? (
               <a
