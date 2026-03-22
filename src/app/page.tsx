@@ -1318,7 +1318,17 @@ export default function Home() {
             />
           </label>
           <label className="block">
-            <span className="text-xs sm:text-sm font-medium text-label">送料（出品者負担・円）</span>
+            <span className="flex items-center gap-2 text-xs sm:text-sm font-medium text-label">
+              送料（出品者負担・円）
+              <a
+                href="https://www.google.com/search?q=ネコポス+ゆうパケット+宅急便+ゆうパック+送料+一覧+フリマ"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-1.5 py-0.5 rounded text-xs font-medium bg-subtle text-muted hover:text-accent hover:bg-accent/10 border border-input transition-colors"
+              >
+                目安を調べる →
+              </a>
+            </span>
             <input
               type="text"
               inputMode="decimal"
