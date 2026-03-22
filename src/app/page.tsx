@@ -833,7 +833,8 @@ export default function Home() {
         )}
         {/* Intro */}
         <p className="shrink-0 text-xs sm:text-sm text-muted">
-          達成率・割引・セット割・フリマ純利益をすぐ計算。<Link href="/about" className="text-accent hover:underline">使い方</Link>や<Link href="/tips" className="text-accent hover:underline">計算のコツ</Link>もご覧ください。
+          達成率・割引・セット割・フリマ純利益をすぐ計算。<br />
+          <Link href="/about" className="text-accent hover:underline">使い方</Link>や<Link href="/tips" className="text-accent hover:underline">計算のコツ</Link>もご覧ください。
         </p>
         {/* App mode toggle: 割合 / セット割 / 割引 / フリマ */}
         <div className="shrink-0 flex flex-wrap rounded-xl sm:rounded-2xl bg-card p-1 sm:p-1.5 shadow-sm border border-page">
