@@ -250,7 +250,6 @@ export default function Home() {
   const [cameraLoading, setCameraLoading] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string>("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const fleaProductNameComposing = useRef(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [discountHistory, setDiscountHistory] = useState<DiscountHistoryItem[]>([]);
   const [fleaHistory, setFleaHistory] = useState<FleaHistoryItem[]>([]);
@@ -1274,9 +1273,7 @@ export default function Home() {
                 autoComplete="off"
                 placeholder="例: 未使用の本"
                 value={fleaProductName}
-                onChange={(e) => { if (!fleaProductNameComposing.current) setFleaProductName(e.target.value); }}
-                onCompositionStart={() => { fleaProductNameComposing.current = true; }}
-                onCompositionEnd={(e) => { fleaProductNameComposing.current = false; setFleaProductName((e.target as HTMLInputElement).value); }}
+                onChange={(e) => setFleaProductName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                 className="flex-1 w-full h-11 sm:h-14 px-3 sm:px-4 text-base sm:text-lg font-medium rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
               />
