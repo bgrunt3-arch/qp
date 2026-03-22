@@ -1266,7 +1266,7 @@ export default function Home() {
           </button>
         </div>
         <div className="shrink-0 space-y-2 sm:space-y-4">
-          <label className="block">
+          <div className="block">
             <span className="text-xs sm:text-sm font-medium text-label">商品名</span>
             <div className="relative mt-1 sm:mt-2 flex gap-2">
               <input
@@ -1302,14 +1302,6 @@ export default function Home() {
                 )}
               </button>
               )}
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleCameraCapture}
-              />
             </div>
             {cameraError && <p className="mt-1 text-xs text-accent">{cameraError}</p>}
             {/* 相場検索ボタン */}
@@ -1329,7 +1321,16 @@ export default function Home() {
                 ))}
               </div>
             )}
-          </label>
+          </div>
+          {/* ファイル input は label の外に置く（label 内だと click が干渉する） */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleCameraCapture}
+          />
           <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">売値（円）</span>
             <input
