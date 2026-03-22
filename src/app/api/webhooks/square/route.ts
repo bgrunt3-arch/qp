@@ -1,4 +1,4 @@
-import { WebhooksHelper } from "square";
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { generateLicenseKey } from "@/lib/license";
 import { saveLicense, saveLicenseByEmail, getLicenseByPayment, isKvConfigured } from "@/lib/kv";
@@ -7,7 +7,24 @@ import { sendLicenseKeyEmail, isEmailConfigured } from "@/lib/email";
 const PREMIUM_AMOUNT_JPY = 100;
 const PREMIUM_AMOUNT_USD_CENTS = 100;
 
+/**
+ * Square の署名検証
+ * Square は HMAC-SHA256(signatureKey, notificationUrl + rawBody) を base64 エンコードした値を
+ * x-square-hmacsha256-signature ヘッダーに付与して送信する。
+ */
+function computeSquareSignature(
+  signatureKey: string,
+  notificationUrl: string,
+  rawBody: string
+): string {
+  return crypto
+    .createHmac("sha256", signatureKey)
+    .update(notificationUrl + rawBody)
+    .digest("base64");
+}
+
 export async function POST(req: NextRequest) {
+  // ストリームは一度だけ消費できる。最初に必ず読み切る。
   let body: string;
   try {
     body = await req.text();
@@ -18,29 +35,32 @@ export async function POST(req: NextRequest) {
 
   console.log("Webhook received!", body);
 
-  const hmacHeader = req.headers.get("x-square-hmacsha256-signature");
-  const legacyHeader = req.headers.get("x-square-signature");
-  const signature = hmacHeader ?? legacyHeader;
-  // SQUARE_WEBHOOK_NOTIFICATION_URL はフルパス込みの URL なのでそのまま使う
-  // それ以外のフォールバックはオリジンのみなのでパスを付加する
-  const notificationUrlEnv = process.env.SQUARE_WEBHOOK_NOTIFICATION_URL;
-  const fullUrl = notificationUrlEnv
-    ? notificationUrlEnv.replace(/\/$/, "")
-    : `${(
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-        "https://qp-lime.vercel.app"
-      ).replace(/\/$/, "")}/api/webhooks/square`;
-  const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+  // Square は x-square-hmacsha256-signature を送信する（旧形式は x-square-signature）
+  const receivedSignature =
+    req.headers.get("x-square-hmacsha256-signature") ??
+    req.headers.get("x-square-signature") ??
+    "";
 
-  console.log("[Square Webhook] Signature headers:", {
-    "x-square-hmacsha256-signature": hmacHeader ? "(present)" : "(absent)",
-    "x-square-signature": legacyHeader ? "(present)" : "(absent)",
-    signatureKeyConfigured: Boolean(signatureKey),
-    notificationUrl: fullUrl,
+  // SQUARE_WEBHOOK_NOTIFICATION_URL にはフルパス込みの URL が設定されている前提
+  const notificationUrl =
+    process.env.SQUARE_WEBHOOK_NOTIFICATION_URL?.replace(/\/$/, "") ??
+    `${(
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+      "https://qp-lime.vercel.app"
+    ).replace(/\/$/, "")}/api/webhooks/square`;
+
+  const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "";
+
+  // --- 診断ログ ---
+  console.log("[Square Webhook] Verification context:", {
+    "x-square-hmacsha256-signature": req.headers.get("x-square-hmacsha256-signature") ? "(present)" : "(absent)",
+    "x-square-signature": req.headers.get("x-square-signature") ? "(present)" : "(absent)",
+    signatureKeyConfigured: signatureKey.length > 0,
+    notificationUrl,
   });
 
-  if (!signature) {
+  if (!receivedSignature) {
     console.error("[Square Webhook] Missing signature header.");
     return NextResponse.json({ error: "Missing signature" }, { status: 403 });
   }
@@ -50,25 +70,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing signature key" }, { status: 500 });
   }
 
-  // x-square-hmacsha256-signature が存在する場合は必ずそちらを使う
-  // WebhooksHelper.verifySignature は HMAC-SHA256 専用のため
-  const hmacSignature = hmacHeader ?? signature;
+  const computedSignature = computeSquareSignature(signatureKey, notificationUrl, body);
 
-  let isValid: boolean;
-  try {
-    isValid = await WebhooksHelper.verifySignature({
-      requestBody: body,
-      signatureHeader: hmacSignature,
-      signatureKey,
-      notificationUrl: fullUrl,
-    });
-  } catch (err) {
-    console.error("[Square Webhook] Signature verification error:", err);
-    return NextResponse.json({ error: "Signature verification failed" }, { status: 500 });
-  }
+  // 計算値と受信値の両方をログに出力して食い違いを特定できるようにする
+  console.log("[Square Webhook] Signature comparison:", {
+    computed: computedSignature,
+    received: receivedSignature,
+    match: computedSignature === receivedSignature,
+  });
 
-  if (!isValid) {
-    console.error("[Square Webhook] Invalid signature. notificationUrl used:", fullUrl);
+  if (computedSignature !== receivedSignature) {
+    console.error("[Square Webhook] Invalid signature.");
     return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
   }
 
