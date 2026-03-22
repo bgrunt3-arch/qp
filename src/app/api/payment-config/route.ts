@@ -11,10 +11,12 @@ export async function GET() {
   // PayPayはまだ表示しない（有効化: Boolean(process.env.PAYPAY_API_KEY && process.env.PAYPAY_API_SECRET)）
   const paypayEnabled = false;
   const premiumPurchaseUrl = process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL || null;
+  const imageSearchEnabled = Boolean(process.env.OPENAI_API_KEY);
 
   return NextResponse.json({
     squareEnabled,
     paypayEnabled,
     premiumPurchaseUrl,
+    imageSearchEnabled,
   });
 }

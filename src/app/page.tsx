@@ -275,10 +275,12 @@ export default function Home() {
     squareEnabled: boolean;
     paypayEnabled: boolean;
     premiumPurchaseUrl: string | null;
+    imageSearchEnabled: boolean;
   } | null>(null);
   const useSquareCheckout = paymentConfig?.squareEnabled ?? false;
   const usePayPayCheckout = paymentConfig?.paypayEnabled ?? false;
   const premiumPurchaseUrl = paymentConfig?.premiumPurchaseUrl ?? process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_URL ?? "";
+  const imageSearchEnabled = paymentConfig?.imageSearchEnabled ?? false;
 
   useEffect(() => setMounted(true), []);
 
@@ -292,14 +294,15 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/payment-config")
       .then((r) => r.json())
-      .then((data: { squareEnabled?: boolean; paypayEnabled?: boolean; premiumPurchaseUrl?: string | null }) =>
+      .then((data: { squareEnabled?: boolean; paypayEnabled?: boolean; premiumPurchaseUrl?: string | null; imageSearchEnabled?: boolean }) =>
         setPaymentConfig({
           squareEnabled: Boolean(data.squareEnabled),
           paypayEnabled: Boolean(data.paypayEnabled),
           premiumPurchaseUrl: data.premiumPurchaseUrl ?? null,
+          imageSearchEnabled: Boolean(data.imageSearchEnabled),
         })
       )
-      .catch(() => setPaymentConfig({ squareEnabled: false, paypayEnabled: false, premiumPurchaseUrl: null }));
+      .catch(() => setPaymentConfig({ squareEnabled: false, paypayEnabled: false, premiumPurchaseUrl: null, imageSearchEnabled: false }));
   }, []);
 
   // Square決済成功時のコールバック
@@ -1275,6 +1278,7 @@ export default function Home() {
                 className="flex-1 w-full h-11 sm:h-14 px-3 sm:px-4 text-base sm:text-lg font-medium rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
               />
               {/* カメラボタン */}
+              {imageSearchEnabled && (
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
@@ -1294,6 +1298,7 @@ export default function Home() {
                   </svg>
                 )}
               </button>
+              )}
               <input
                 ref={cameraInputRef}
                 type="file"
