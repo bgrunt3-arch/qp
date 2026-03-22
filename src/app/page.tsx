@@ -1351,6 +1351,7 @@ export default function Home() {
                 placeholder="10"
                 value={fleaCommissionRate}
                 onChange={(e) => setFleaCommissionRate(sanitizeNumericInput(e.target.value))}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                 className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
               />
             </label>
@@ -1363,6 +1364,7 @@ export default function Home() {
                 placeholder="200"
                 value={fleaTransferFee}
                 onChange={(e) => setFleaTransferFee(sanitizeNumericInput(e.target.value))}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                 className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
               />
             </label>
@@ -1377,6 +1379,7 @@ export default function Home() {
                 placeholder="0"
                 value={fleaShipping}
                 onChange={(e) => setFleaShipping(sanitizeNumericInput(e.target.value))}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                 className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
               />
             </label>
