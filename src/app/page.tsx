@@ -737,13 +737,6 @@ export default function Home() {
 
   const progressValue = percent !== null ? Math.min(100, Math.max(0, percent)) : 0;
 
-  const FLEA_MARKETS = [
-    { name: "メルカリ", url: (q: string) => `https://www.mercari.com/jp/search/?keyword=${encodeURIComponent(q)}` },
-    { name: "ヤフオク", url: (q: string) => `https://auctions.yahoo.co.jp/search/search?p=${encodeURIComponent(q)}` },
-    { name: "ラクマ",   url: (q: string) => `https://fril.jp/search?query=${encodeURIComponent(q)}` },
-    { name: "PayPayフリマ", url: (q: string) => `https://paypayflea.jp/search?keyword=${encodeURIComponent(q)}` },
-  ];
-
   const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1301,23 +1294,6 @@ export default function Home() {
               )}
             </div>
             {cameraError && <p className="mt-1 text-xs text-accent">{cameraError}</p>}
-            {/* 相場検索ボタン */}
-            {fleaProductName.trim() && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="text-xs text-muted self-center">相場を検索:</span>
-                {FLEA_MARKETS.map((m) => (
-                  <a
-                    key={m.name}
-                    href={m.url(fleaProductName.trim())}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 py-1 rounded-md text-xs font-medium bg-subtle text-muted hover:text-accent hover:bg-accent/10 border border-input transition-colors"
-                  >
-                    {m.name} →
-                  </a>
-                ))}
-              </div>
-            )}
           </div>
           {/* ファイル input は label の外に置く（label 内だと click が干渉する） */}
           <input
@@ -1339,6 +1315,19 @@ export default function Home() {
               onChange={(e) => setFleaSalePrice(sanitizeNumericInput(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg sm:text-xl font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs sm:text-sm font-medium text-label">送料（出品者負担・円）</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0"
+              value={fleaShipping}
+              onChange={(e) => setFleaShipping(sanitizeNumericInput(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
             />
           </label>
           <div className="grid grid-cols-2 gap-2 sm:gap-4">
@@ -1364,21 +1353,6 @@ export default function Home() {
                 placeholder="200"
                 value={fleaTransferFee}
                 onChange={(e) => setFleaTransferFee(sanitizeNumericInput(e.target.value))}
-                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
-              />
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:gap-4">
-            <label className="block">
-              <span className="text-xs sm:text-sm font-medium text-label">送料（出品者負担・円）</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="0"
-                value={fleaShipping}
-                onChange={(e) => setFleaShipping(sanitizeNumericInput(e.target.value))}
                 onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                 className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
               />
