@@ -1382,18 +1382,6 @@ export default function Home() {
                 className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
               />
             </label>
-            <label className="block">
-              <span className="text-xs sm:text-sm font-medium text-label">原価（円）</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="0"
-                value={fleaCost}
-                onChange={(e) => setFleaCost(sanitizeNumericInput(e.target.value))}
-                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
-              />
-            </label>
           </div>
         </div>
 
