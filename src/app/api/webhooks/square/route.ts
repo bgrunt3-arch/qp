@@ -7,14 +7,6 @@ import { sendLicenseKeyEmail, isEmailConfigured } from "@/lib/email";
 const PREMIUM_AMOUNT_JPY = 100;
 const PREMIUM_AMOUNT_USD_CENTS = 100;
 
-/** x-square-signature と x-square-hmacsha256-signature の両方に対応（Square API の種類により異なる） */
-function getSignature(req: NextRequest): string | null {
-  return (
-    req.headers.get("x-square-signature") ??
-    req.headers.get("x-square-hmacsha256-signature")
-  );
-}
-
 export async function POST(req: NextRequest) {
   let body: string;
   try {
@@ -26,7 +18,9 @@ export async function POST(req: NextRequest) {
 
   console.log("Webhook received!", body);
 
-  const signature = getSignature(req);
+  const hmacHeader = req.headers.get("x-square-hmacsha256-signature");
+  const legacyHeader = req.headers.get("x-square-signature");
+  const signature = hmacHeader ?? legacyHeader;
   // SQUARE_WEBHOOK_NOTIFICATION_URL はフルパス込みの URL なのでそのまま使う
   // それ以外のフォールバックはオリジンのみなのでパスを付加する
   const notificationUrlEnv = process.env.SQUARE_WEBHOOK_NOTIFICATION_URL;
@@ -39,11 +33,15 @@ export async function POST(req: NextRequest) {
       ).replace(/\/$/, "")}/api/webhooks/square`;
   const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
 
+  console.log("[Square Webhook] Signature headers:", {
+    "x-square-hmacsha256-signature": hmacHeader ? "(present)" : "(absent)",
+    "x-square-signature": legacyHeader ? "(present)" : "(absent)",
+    signatureKeyConfigured: Boolean(signatureKey),
+    notificationUrl: fullUrl,
+  });
+
   if (!signature) {
-    console.error("[Square Webhook] Missing signature header. Available headers:", {
-      "x-square-signature": req.headers.get("x-square-signature"),
-      "x-square-hmacsha256-signature": req.headers.get("x-square-hmacsha256-signature"),
-    });
+    console.error("[Square Webhook] Missing signature header.");
     return NextResponse.json({ error: "Missing signature" }, { status: 403 });
   }
 
@@ -52,11 +50,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing signature key" }, { status: 500 });
   }
 
+  // x-square-hmacsha256-signature が存在する場合は必ずそちらを使う
+  // WebhooksHelper.verifySignature は HMAC-SHA256 専用のため
+  const hmacSignature = hmacHeader ?? signature;
+
   let isValid: boolean;
   try {
     isValid = await WebhooksHelper.verifySignature({
       requestBody: body,
-      signatureHeader: signature,
+      signatureHeader: hmacSignature,
       signatureKey,
       notificationUrl: fullUrl,
     });
