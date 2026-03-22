@@ -247,6 +247,9 @@ export default function Home() {
   const [fleaTransferFee, setFleaTransferFee] = useState<string>("200");
   const [fleaShipping, setFleaShipping] = useState<string>("");
   const [fleaCost, setFleaCost] = useState<string>("");
+  const [cameraLoading, setCameraLoading] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string>("");
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [discountHistory, setDiscountHistory] = useState<DiscountHistoryItem[]>([]);
   const [fleaHistory, setFleaHistory] = useState<FleaHistoryItem[]>([]);
@@ -730,6 +733,45 @@ export default function Home() {
   }, [fleaHistory]);
 
   const progressValue = percent !== null ? Math.min(100, Math.max(0, percent)) : 0;
+
+  const FLEA_MARKETS = [
+    { name: "メルカリ", url: (q: string) => `https://www.mercari.com/jp/search/?keyword=${encodeURIComponent(q)}` },
+    { name: "ヤフオク", url: (q: string) => `https://auctions.yahoo.co.jp/search/search?p=${encodeURIComponent(q)}` },
+    { name: "ラクマ",   url: (q: string) => `https://fril.jp/search?query=${encodeURIComponent(q)}` },
+    { name: "PayPayフリマ", url: (q: string) => `https://paypayflea.jp/search?keyword=${encodeURIComponent(q)}` },
+  ];
+
+  const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCameraLoading(true);
+    setCameraError("");
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/image-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, mimeType: file.type }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.productName) throw new Error(data.error ?? "認識失敗");
+      if (data.productName === "不明") {
+        setCameraError("商品を認識できませんでした。もう一度撮影してください。");
+      } else {
+        setFleaProductName(data.productName);
+      }
+    } catch {
+      setCameraError("認識に失敗しました。再度お試しください。");
+    } finally {
+      setCameraLoading(false);
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+    }
+  };
 
   const handleSquareCheckout = async () => {
     setCheckoutLoading(true);
@@ -1222,15 +1264,63 @@ export default function Home() {
         <div className="shrink-0 space-y-2 sm:space-y-4">
           <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">商品名</span>
-            <input
-              type="text"
-              autoComplete="off"
-              placeholder="例: 未使用の本"
-              value={fleaProductName}
-              onChange={(e) => setFleaProductName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-base sm:text-lg font-medium rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
-            />
+            <div className="relative mt-1 sm:mt-2 flex gap-2">
+              <input
+                type="text"
+                autoComplete="off"
+                placeholder="例: 未使用の本"
+                value={fleaProductName}
+                onChange={(e) => setFleaProductName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                className="flex-1 w-full h-11 sm:h-14 px-3 sm:px-4 text-base sm:text-lg font-medium rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent shadow-sm transition-shadow"
+              />
+              {/* カメラボタン */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={cameraLoading}
+                className="shrink-0 h-11 sm:h-14 w-11 sm:w-14 flex items-center justify-center rounded-lg sm:rounded-xl bg-subtle border border-input text-muted hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                title="カメラで商品を認識"
+              >
+                {cameraLoading ? (
+                  <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                )}
+              </button>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleCameraCapture}
+              />
+            </div>
+            {cameraError && <p className="mt-1 text-xs text-accent">{cameraError}</p>}
+            {/* 相場検索ボタン */}
+            {fleaProductName.trim() && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span className="text-xs text-muted self-center">相場を検索:</span>
+                {FLEA_MARKETS.map((m) => (
+                  <a
+                    key={m.name}
+                    href={m.url(fleaProductName.trim())}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1 rounded-md text-xs font-medium bg-subtle text-muted hover:text-accent hover:bg-accent/10 border border-input transition-colors"
+                  >
+                    {m.name} →
+                  </a>
+                ))}
+              </div>
+            )}
           </label>
           <label className="block">
             <span className="text-xs sm:text-sm font-medium text-label">売値（円）</span>
