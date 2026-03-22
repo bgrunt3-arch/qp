@@ -27,12 +27,16 @@ export async function POST(req: NextRequest) {
   console.log("Webhook received!", body);
 
   const signature = getSignature(req);
-  const baseUrl =
-    process.env.SQUARE_WEBHOOK_NOTIFICATION_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-    "https://qp-lime.vercel.app";
-  const fullUrl = `${baseUrl.replace(/\/$/, "")}/api/webhooks/square`;
+  // SQUARE_WEBHOOK_NOTIFICATION_URL はフルパス込みの URL なのでそのまま使う
+  // それ以外のフォールバックはオリジンのみなのでパスを付加する
+  const notificationUrlEnv = process.env.SQUARE_WEBHOOK_NOTIFICATION_URL;
+  const fullUrl = notificationUrlEnv
+    ? notificationUrlEnv.replace(/\/$/, "")
+    : `${(
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+        "https://qp-lime.vercel.app"
+      ).replace(/\/$/, "")}/api/webhooks/square`;
   const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
 
   if (!signature) {
