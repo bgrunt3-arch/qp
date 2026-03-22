@@ -61,7 +61,9 @@ export async function POST(req: NextRequest) {
   });
 
   if (!receivedSignature) {
-    console.error("[Square Webhook] Missing signature header.");
+    const allHeaders: Record<string, string> = {};
+    req.headers.forEach((value, key) => { allHeaders[key] = value; });
+    console.error("[Square Webhook] Missing signature header. All received headers:", allHeaders);
     return NextResponse.json({ error: "Missing signature" }, { status: 403 });
   }
 
