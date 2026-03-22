@@ -130,9 +130,11 @@ export async function POST(req: NextRequest) {
   }
 
   const paymentId = payment.id;
-  let licenseKey = await getLicenseByPayment(paymentId, "square");
-  if (!licenseKey) {
-    licenseKey = generateLicenseKey();
+  const existingLicenseKey = await getLicenseByPayment(paymentId, "square");
+  const isNewPayment = !existingLicenseKey;
+  const licenseKey = existingLicenseKey ?? generateLicenseKey();
+
+  if (isNewPayment) {
     await saveLicense(licenseKey, paymentId, "square");
   }
 
@@ -142,15 +144,18 @@ export async function POST(req: NextRequest) {
 
   if (email) {
     await saveLicenseByEmail(email, licenseKey);
-    if (isEmailConfigured()) {
-      const emailResult = await sendLicenseKeyEmail(email, licenseKey);
-      if (!emailResult.ok) {
-        console.error("[Square Webhook] Failed to send license email:", emailResult.error);
+    // メール送信は初回のみ（Square のリトライで重複送信しないよう isNewPayment で制御）
+    if (isNewPayment) {
+      if (isEmailConfigured()) {
+        const emailResult = await sendLicenseKeyEmail(email, licenseKey);
+        if (!emailResult.ok) {
+          console.error("[Square Webhook] Failed to send license email:", emailResult.error);
+        }
+      } else {
+        console.warn("[Square Webhook] Resend not configured. License key not emailed:", licenseKey);
       }
-    } else {
-      console.warn("[Square Webhook] Resend not configured. License key not emailed:", licenseKey);
     }
-  } else {
+  } else if (isNewPayment) {
     console.warn("[Square Webhook] No buyer email in payment. License saved but not emailed:", { paymentId, licenseKey });
   }
 
