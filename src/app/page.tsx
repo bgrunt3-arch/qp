@@ -1614,21 +1614,6 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setPremium(false);
-                    setPremiumModalOpen(false);
-                    setToastMessage("Premiumをリセットしました");
-                    setToastVisible(true);
-                    setTimeout(() => {
-                      setToastVisible(false);
-                      setToastMessage("コピーしました");
-                    }, 2500);
-                  }}
-                  className="text-xs text-muted hover:text-foreground underline"
-                >
-                  購入をやり直す（リセット）
-                </button>
               </div>
             ) : paymentConfig === null ? (
               <button
