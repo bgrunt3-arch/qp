@@ -7,6 +7,7 @@ import { Copy, Trash2, Share2, Sun, Moon, Percent, Tag, ArrowUpDown, Crown, X, D
 import { AdBanner } from "@/components/AdBanner";
 import { usePremium } from "@/hooks/usePremium";
 import { useAccentColor } from "@/hooks/useAccentColor";
+import { FLEA_MARKET_PRESETS } from "@/lib/fleaMarkets";
 
 const STORAGE_KEY = "percent-quick-history";
 const COMPARE_STORAGE_KEY = "percent-quick-compare";
@@ -1229,33 +1230,18 @@ export default function Home() {
         ) : appMode === "flea" ? (
           <>
         <div className="shrink-0 flex flex-wrap gap-2 mb-2">
-          <button
-            onClick={() => {
-              setFleaCommissionRate("10");
-              setFleaTransferFee("200");
-            }}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-subtle text-muted hover:text-accent"
-          >
-            メルカリ
-          </button>
-          <button
-            onClick={() => {
-              setFleaCommissionRate("10");
-              setFleaTransferFee("210");
-            }}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-subtle text-muted hover:text-accent"
-          >
-            ラクマ
-          </button>
-          <button
-            onClick={() => {
-              setFleaCommissionRate("5");
-              setFleaTransferFee("100");
-            }}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-subtle text-muted hover:text-accent"
-          >
-            Yahoo!フリマ
-          </button>
+          {FLEA_MARKET_PRESETS.map((preset) => (
+            <button
+              key={preset.name}
+              onClick={() => {
+                setFleaCommissionRate(preset.commissionRate);
+                setFleaTransferFee(preset.transferFee);
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-subtle text-muted hover:text-accent"
+            >
+              {preset.name}
+            </button>
+          ))}
         </div>
         <div className="shrink-0 space-y-2 sm:space-y-4">
           <div className="block">

@@ -4,6 +4,7 @@ const PREFIX = "qp:";
 const LICENSE_PREFIX = `${PREFIX}license:`;
 const PAYMENT_PREFIX = `${PREFIX}payment:`;
 const EMAIL_PREFIX = `${PREFIX}email:`;
+const EVENT_PREFIX = `${PREFIX}event:`;
 
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -89,6 +90,20 @@ export async function verifyLicense(licenseKey: string): Promise<boolean> {
   if (!redis) return false;
   const data = await redis.get<string>(`${LICENSE_PREFIX}${licenseKey}`);
   return data != null;
+}
+
+/**
+ * Webhook event_id の冪等性チェック（SET NX）。
+ * 同一 event_id を持つ Webhook が再送されても最初の1件だけ処理する。
+ * paymentId ベースの claimPaymentProcessing と二重で守る構成。
+ */
+export async function claimEventProcessing(eventId: string): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return true;
+  const key = `${EVENT_PREFIX}${eventId}`;
+  // 7日間保持（Square のリトライ期間より十分長い）
+  const result = await redis.set(key, "1", { nx: true, ex: 60 * 60 * 24 * 7 });
+  return result !== null;
 }
 
 export function isKvConfigured(): boolean {

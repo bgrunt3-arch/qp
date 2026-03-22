@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { generateLicenseKey } from "@/lib/license";
-import { saveLicense, saveLicenseByEmail, getLicenseByPayment, claimPaymentProcessing, isKvConfigured } from "@/lib/kv";
+import { saveLicense, saveLicenseByEmail, getLicenseByPayment, claimPaymentProcessing, claimEventProcessing, isKvConfigured } from "@/lib/kv";
 import { sendLicenseKeyEmail, isEmailConfigured } from "@/lib/email";
 
 const PREMIUM_AMOUNT_JPY = 100;
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
   }
 
   let payload: {
+    event_id?: string;
     type?: string;
     data?: {
       object?: {
@@ -110,6 +111,15 @@ export async function POST(req: NextRequest) {
 
   if (payload.type !== "payment.updated") {
     return NextResponse.json({ received: true });
+  }
+
+  // event_id による冪等性チェック（paymentId チェックより前段で弾く）
+  if (payload.event_id && isKvConfigured()) {
+    const eventClaimed = await claimEventProcessing(payload.event_id);
+    if (!eventClaimed) {
+      console.log("[Square Webhook] Duplicate event_id, skipping:", payload.event_id);
+      return NextResponse.json({ received: true });
+    }
   }
 
   const payment = payload.data?.object?.payment;
