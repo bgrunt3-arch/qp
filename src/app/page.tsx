@@ -1773,7 +1773,6 @@ export default function Home() {
                 <p className="text-xs text-accent mt-1">{claimError}</p>
               )}
             </div>
-            <p className="text-xs font-medium text-label mt-4 mb-2">購入する</p>
             {useSquareCheckout || usePayPayCheckout ? (
               <div className="space-y-2">
                 {useSquareCheckout && (
