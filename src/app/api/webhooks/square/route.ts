@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { generateLicenseKey } from "@/lib/license";
-import { saveLicense, saveLicenseByEmail, getLicenseByPayment, isKvConfigured } from "@/lib/kv";
+import { saveLicense, saveLicenseByEmail, getLicenseByPayment, claimPaymentProcessing, isKvConfigured } from "@/lib/kv";
 import { sendLicenseKeyEmail, isEmailConfigured } from "@/lib/email";
 
 const PREMIUM_AMOUNT_JPY = 100;
@@ -130,6 +130,14 @@ export async function POST(req: NextRequest) {
   }
 
   const paymentId = payment.id;
+
+  // SET NX でアトミックに処理権を取得。並列リトライが来ても最初の1件だけ通す
+  const claimed = await claimPaymentProcessing(paymentId, "square");
+  if (!claimed) {
+    console.log("[Square Webhook] Duplicate request for paymentId, skipping:", paymentId);
+    return NextResponse.json({ received: true });
+  }
+
   const existingLicenseKey = await getLicenseByPayment(paymentId, "square");
   const isNewPayment = !existingLicenseKey;
   const licenseKey = existingLicenseKey ?? generateLicenseKey();

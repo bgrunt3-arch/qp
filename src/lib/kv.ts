@@ -37,6 +37,23 @@ export async function saveLicense(
   return true;
 }
 
+/**
+ * 決済の処理権をアトミックに取得する（SET NX）。
+ * 同一 paymentId に対して最初に呼び出したリクエストのみ true を返す。
+ * 並列リトライによるメール重複送信を防ぐために使用する。
+ */
+export async function claimPaymentProcessing(
+  paymentId: string,
+  source: "paypay" | "square"
+): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return true; // Redis 未設定時は処理を通す
+  const key = `${PAYMENT_PREFIX}${source}:${paymentId}:claimed`;
+  // NX = 存在しない場合のみセット。成功すれば "OK"、既存なら null
+  const result = await redis.set(key, "1", { nx: true, ex: 60 * 60 * 24 });
+  return result !== null;
+}
+
 /** 既にこの決済でライセンスを発行済みか */
 export async function getLicenseByPayment(
   paymentId: string,
