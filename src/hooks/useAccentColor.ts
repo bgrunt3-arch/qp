@@ -11,6 +11,7 @@ export const ACCENT_COLORS = [
   { id: "purple", name: "パープル", value: "#a855f7" },
   { id: "amber", name: "アンバー", value: "#f59e0b" },
   { id: "teal", name: "ティール", value: "#14b8a6" },
+  { id: "pink", name: "ピンク", value: "#ec4899" },
 ] as const;
 
 const DEFAULT_ACCENT = ACCENT_COLORS[0].value;
