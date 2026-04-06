@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
-import { AdSenseScript } from "@/components/AdSenseScript";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -79,7 +78,6 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.webmanifest" />
       </head>
       <body className="min-h-full flex flex-col">
-        <AdSenseScript />
         <ThemeProvider>
           <ServiceWorkerRegister />
           {children}

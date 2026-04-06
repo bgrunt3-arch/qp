@@ -867,7 +867,7 @@ export default function Home() {
         {/* 上部広告もスクロール内に配置（履歴が隠れないように） */}
         {premiumMounted && !isPremium && (
           <aside aria-label="広告" className="shrink-0 py-2 isolate border-b border-page bg-subtle/30">
-            <AdBanner format="auto" className="max-w-md mx-auto" />
+            <AdBanner className="max-w-md mx-auto" />
           </aside>
         )}
         {/* Intro */}
@@ -1610,7 +1610,7 @@ export default function Home() {
         {/* 広告・フッターをスクロール内に配置（モバイルで履歴と被らない） */}
         {premiumMounted && !isPremium && (
           <aside aria-label="広告" className="shrink-0 px-3 sm:px-4 py-4 sm:py-5 border-t border-page isolate bg-subtle/30 mt-4">
-            <AdBanner format="auto" className="max-w-md mx-auto" />
+            <AdBanner size="small" className="max-w-md mx-auto" />
           </aside>
         )}
         <footer className="shrink-0 px-3 sm:px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-page mt-4">
