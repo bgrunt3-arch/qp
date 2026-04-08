@@ -89,7 +89,7 @@ export default function AboutPage() {
           <h2 className="text-lg font-semibold">Premium機能</h2>
           <p>Premiumでは以下の機能が利用できます。</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>アクセントカラーの変更（6色から選択）</li>
+            <li>アクセントカラーの変更（7色から選択）</li>
             <li>履歴・比較リストの上限拡張</li>
             <li>CSVエクスポート（履歴・比較リスト・割引履歴をダウンロード）</li>
           </ul>
