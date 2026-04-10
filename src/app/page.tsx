@@ -532,7 +532,7 @@ export default function Home() {
     } catch {
       // fallback
     }
-  }, [appMode, percent, discountResult, originalPriceNum, priceAfterDiscount, discountAmount, fleaProductName, fleaSalePriceNum, fleaNetProfit, fleaCommissionAmount, fleaTransferFeeNum]);
+  }, [appMode, percent, discountResult, originalPriceNum, priceAfterDiscount, discountAmount, fleaProductName, fleaSalePriceNum, fleaNetProfit, fleaCommissionAmount]);
 
   const handleClear = useCallback(() => {
     setTotal("");
@@ -642,7 +642,6 @@ export default function Home() {
     fleaProductName,
     fleaSalePriceNum,
     fleaCommissionRateNum,
-    fleaTransferFeeNum,
     fleaShippingNum,
     fleaCostNum,
     fleaCommissionAmount,
