@@ -60,7 +60,6 @@ type FleaHistoryItem = {
   productName?: string;
   salePrice: number;
   commissionRate: number;
-  transferFee: number;
   shippingCost: number;
   cost: number;
   commissionAmount: number;
@@ -245,7 +244,6 @@ export default function Home() {
   const [fleaProductName, setFleaProductName] = useState<string>("");
   const [fleaSalePrice, setFleaSalePrice] = useState<string>("");
   const [fleaCommissionRate, setFleaCommissionRate] = useState<string>("10");
-  const [fleaTransferFee, setFleaTransferFee] = useState<string>("200");
   const [fleaShipping, setFleaShipping] = useState<string>("");
   const [fleaCost, setFleaCost] = useState<string>("");
   const [cameraLoading, setCameraLoading] = useState<boolean>(false);
@@ -410,7 +408,6 @@ export default function Home() {
 
   const fleaSalePriceNum = parseFloat(fleaSalePrice) || 0;
   const fleaCommissionRateNum = Math.min(100, Math.max(0, parseFloat(fleaCommissionRate) || 0));
-  const fleaTransferFeeNum = Math.max(0, parseFloat(fleaTransferFee) || 0);
   const fleaShippingNum = Math.max(0, parseFloat(fleaShipping) || 0);
   const fleaCostNum = Math.max(0, parseFloat(fleaCost) || 0);
   const fleaCommissionAmount =
@@ -419,7 +416,7 @@ export default function Home() {
       : 0;
   const fleaPayoutAmount =
     fleaSalePriceNum > 0
-      ? Math.round((fleaSalePriceNum - fleaCommissionAmount - fleaTransferFeeNum - fleaShippingNum) * 100) / 100
+      ? Math.round((fleaSalePriceNum - fleaCommissionAmount - fleaShippingNum) * 100) / 100
       : 0;
   const fleaNetProfit =
     fleaSalePriceNum > 0
@@ -484,7 +481,7 @@ export default function Home() {
     if (appMode === "flea") {
       if (fleaSalePriceNum <= 0) return;
       const namePart = fleaProductName.trim() ? `（${fleaProductName.trim()}）` : "";
-      const text = `${namePart}売値${formatYen(fleaSalePriceNum)} → 純利益${formatYen(fleaNetProfit)}（手数料${formatYen(fleaCommissionAmount)}、振込${formatYen(fleaTransferFeeNum)}）`;
+      const text = `${namePart}売値${formatYen(fleaSalePriceNum)} → 純利益${formatYen(fleaNetProfit)}（手数料${formatYen(fleaCommissionAmount)}）`;
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
@@ -548,7 +545,6 @@ export default function Home() {
     setFleaProductName("");
     setFleaSalePrice("");
     setFleaCommissionRate("10");
-    setFleaTransferFee("200");
     setFleaShipping("");
     setFleaCost("");
     setIsInverted(false);
@@ -629,7 +625,6 @@ export default function Home() {
       productName: fleaProductName.trim() || undefined,
       salePrice: fleaSalePriceNum,
       commissionRate: fleaCommissionRateNum,
-      transferFee: fleaTransferFeeNum,
       shippingCost: fleaShippingNum,
       cost: fleaCostNum,
       commissionAmount: fleaCommissionAmount,
@@ -725,10 +720,10 @@ export default function Home() {
 
   const exportFleaHistory = useCallback(() => {
     const escapeCsv = (s: string) => (s.includes(",") || s.includes('"') ? `"${String(s).replace(/"/g, '""')}"` : s);
-    const header = "商品名,売値,手数料率(%),振込手数料,送料,原価,販売手数料,純利益,日時\n";
+    const header = "商品名,売値,手数料率(%),送料,原価,販売手数料,純利益,日時\n";
     const rows = fleaHistory.map(
       (item) =>
-        `${escapeCsv(item.productName ?? "")},${item.salePrice},${item.commissionRate},${item.transferFee},${item.shippingCost},${item.cost},${item.commissionAmount},${item.netProfit},${new Date(item.createdAt).toLocaleString("ja-JP")}`
+        `${escapeCsv(item.productName ?? "")},${item.salePrice},${item.commissionRate},${item.shippingCost},${item.cost},${item.commissionAmount},${item.netProfit},${new Date(item.createdAt).toLocaleString("ja-JP")}`
     );
     downloadCSV(header + rows.join("\n"), `qp-フリマ履歴-${new Date().toISOString().slice(0, 10)}.csv`);
     setToastMessage("フリマ履歴をエクスポートしました");
@@ -1235,7 +1230,6 @@ export default function Home() {
               key={preset.name}
               onClick={() => {
                 setFleaCommissionRate(preset.commissionRate);
-                setFleaTransferFee(preset.transferFee);
               }}
               className="px-3 py-1.5 rounded-lg text-xs font-medium bg-subtle text-muted hover:text-accent"
             >
@@ -1340,19 +1334,6 @@ export default function Home() {
                 className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
               />
             </label>
-            <label className="block">
-              <span className="text-xs sm:text-sm font-medium text-label">振込手数料（円）</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="200"
-                value={fleaTransferFee}
-                onChange={(e) => setFleaTransferFee(sanitizeNumericInput(e.target.value))}
-                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                className="mt-1 sm:mt-2 w-full h-11 sm:h-14 px-3 sm:px-4 text-lg font-semibold rounded-lg sm:rounded-xl bg-input border border-input text-input-foreground placeholder:text-result-empty focus:outline-none focus:ring-2 focus:ring-[#ff6b6b] focus:border-transparent"
-              />
-            </label>
           </div>
         </div>
 
@@ -1364,10 +1345,6 @@ export default function Home() {
                 <span className="text-base font-semibold text-accent tabular-nums">
                   -{formatYen(fleaCommissionAmount)}（{fleaCommissionRateNum}%）
                 </span>
-              </li>
-              <li className="flex justify-between items-center gap-3 py-3 px-4">
-                <span className="text-sm text-muted">振込手数料</span>
-                <span className="text-base font-semibold tabular-nums">-{formatYen(fleaTransferFeeNum)}</span>
               </li>
               {fleaShippingNum > 0 && (
                 <li className="flex justify-between items-center gap-3 py-3 px-4">
@@ -1437,7 +1414,7 @@ export default function Home() {
                       {item.productName ? `（${item.productName}）` : ""}売値{formatYen(item.salePrice)} → 純利益{formatYen(item.netProfit)}
                     </span>
                     <span className="text-xs text-muted block">
-                      手数料{formatYen(item.commissionAmount)}・振込{formatYen(item.transferFee)}
+                      手数料{formatYen(item.commissionAmount)}
                       {item.cost > 0 ? `・原価${formatYen(item.cost)}` : ""}
                     </span>
                   </div>
